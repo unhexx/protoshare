@@ -1,0 +1,10 @@
+{
+  "name": "@protoshare/overlay",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": "./src/vite.ts",
+    "./storybook": "./src/storybook.ts"
+  }
+}

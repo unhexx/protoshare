@@ -30,6 +30,21 @@ If `playwright install` dies on a SOCKS proxy, retry without it:
 env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY npx pnpm@10 --filter @protoshare/capture exec playwright install chromium
 ```
 
+## Overlay (Vite / Storybook)
+
+Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`.
+
+```ts
+// vite.config.ts
+import { protoshareOverlay } from "@protoshare/overlay/vite";
+export default { plugins: [protoshareOverlay()] };
+```
+
+```ts
+// .storybook/main.ts
+addons: ["@protoshare/overlay/storybook"];
+```
+
 ## Stack (v0.1)
 
 TypeScript · pnpm workspaces · Hono · Playwright · citty. See `docs/superpowers/specs/2026-08-21-protoshare-stack-design.md`.

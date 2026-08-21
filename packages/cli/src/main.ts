@@ -240,7 +240,17 @@ const main = defineCommand({
       }
       throw err;
     }
-    await writeGallery({ outDir, title, origin: target.origin, shots, slug });
+    const captured = shots.length;
+    const total = target.kind === "storybook" ? target.stories.length : 1;
+    await writeGallery({
+      outDir,
+      title,
+      origin: target.origin,
+      shots,
+      slug,
+      captured,
+      total,
+    });
 
     console.log(`Share:   ${slug}`);
     console.log(`Files:   ${outDir}`);

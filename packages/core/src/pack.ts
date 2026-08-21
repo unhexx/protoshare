@@ -13,6 +13,7 @@ async function listFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, { withFileTypes: true });
   for (const entry of entries) {
     const path = join(root, entry.name);
+    if (entry.name === "shots-raw") continue;
     if (entry.isDirectory()) {
       out.push(...(await listFiles(path)));
     } else if (entry.isFile()) {
@@ -56,7 +57,9 @@ export async function packGallery(
 ): Promise<string> {
   const files = (await listFiles(outDir)).filter((file) => {
     const rel = posixRel(outDir, file);
-    return rel !== ARCHIVE_NAME && !rel.endsWith(`/${ARCHIVE_NAME}`);
+    if (rel === ARCHIVE_NAME || rel.endsWith(`/${ARCHIVE_NAME}`)) return false;
+    if (rel === "shots-raw" || rel.startsWith("shots-raw/")) return false;
+    return true;
   });
   files.sort();
 

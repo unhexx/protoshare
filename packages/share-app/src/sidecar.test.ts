@@ -50,7 +50,7 @@ describe("startSidecar", () => {
       onShare: async (req) => {
         expect(req.origin).toBe("http://127.0.0.1:6006");
         expect(req.title).toBe("Button");
-        return { url: "http://127.0.0.1:4177/" };
+        return { url: "http://127.0.0.1:4177/", captured: 1, total: 1 };
       },
     });
     stop = server.stop;
@@ -79,7 +79,11 @@ describe("startSidecar", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe(loopback);
     expect(res.headers.get("access-control-allow-credentials")).toBeNull();
-    expect(await res.json()).toEqual({ url: "http://127.0.0.1:4177/" });
+    expect(await res.json()).toEqual({
+      url: "http://127.0.0.1:4177/",
+      captured: 1,
+      total: 1,
+    });
   });
 
   it("OPTIONS+POST с Origin http://[::1]:6006 — эхо и allow-headers", async () => {
@@ -88,7 +92,7 @@ describe("startSidecar", () => {
       port: 0,
       onShare: async (req) => {
         expect(req.origin).toBe("http://127.0.0.1:6006");
-        return { url: "http://127.0.0.1:4177/" };
+        return { url: "http://127.0.0.1:4177/", captured: 1, total: 1 };
       },
     });
     stop = server.stop;
@@ -115,7 +119,11 @@ describe("startSidecar", () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe(ipv6);
-    expect(await res.json()).toEqual({ url: "http://127.0.0.1:4177/" });
+    expect(await res.json()).toEqual({
+      url: "http://127.0.0.1:4177/",
+      captured: 1,
+      total: 1,
+    });
   });
 
   it("loopback Origin + RFC1918 тело — 200 и onShare с LAN origin", async () => {
@@ -125,7 +133,7 @@ describe("startSidecar", () => {
       port: 0,
       onShare: async (req) => {
         expect(req.origin).toBe(lan);
-        return { url: "http://127.0.0.1:4177/" };
+        return { url: "http://127.0.0.1:4177/", captured: 1, total: 1 };
       },
     });
     stop = server.stop;
@@ -141,7 +149,11 @@ describe("startSidecar", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe(loopback);
     expect(res.headers.get("access-control-allow-origin")).not.toBe(lan);
-    expect(await res.json()).toEqual({ url: "http://127.0.0.1:4177/" });
+    expect(await res.json()).toEqual({
+      url: "http://127.0.0.1:4177/",
+      captured: 1,
+      total: 1,
+    });
   });
 
   it("OPTIONS+POST с публичным Origin — 403 forbidden-origin", async () => {
@@ -150,7 +162,7 @@ describe("startSidecar", () => {
       port: 0,
       onShare: async () => {
         called += 1;
-        return { url: "http://127.0.0.1:4177/" };
+        return { url: "http://127.0.0.1:4177/", captured: 1, total: 1 };
       },
     });
     stop = server.stop;
@@ -183,7 +195,7 @@ describe("startSidecar", () => {
       port: 0,
       onShare: async () => {
         called += 1;
-        return { url: "http://127.0.0.1:4177/" };
+        return { url: "http://127.0.0.1:4177/", captured: 1, total: 1 };
       },
     });
     stop = server.stop;
@@ -216,7 +228,7 @@ describe("startSidecar", () => {
       port: 0,
       onShare: async () => {
         called += 1;
-        return { url: "http://127.0.0.1:4177/" };
+        return { url: "http://127.0.0.1:4177/", captured: 1, total: 1 };
       },
     });
     stop = server.stop;
@@ -242,7 +254,7 @@ describe("startSidecar", () => {
   it("тело с публичным origin — 400 not-local", async () => {
     const server = await startSidecar({
       port: 0,
-      onShare: async () => ({ url: "http://127.0.0.1:4177/" }),
+      onShare: async () => ({ url: "http://127.0.0.1:4177/", captured: 1, total: 1 }),
     });
     stop = server.stop;
 
@@ -294,5 +306,58 @@ describe("startSidecar", () => {
     const body = (await res.json()) as { error: string; detail: string };
     expect(body.error).toBe("share-failed");
     expect(body.detail).toBe("boom");
+  });
+
+  it("POST принимает storyId и отдаёт captured/total", async () => {
+    const server = await startSidecar({
+      port: 0,
+      onShare: async (req) => {
+        expect(req.storyId).toBe("button--primary");
+        expect(req.title).toBe("Button");
+        return { url: "http://127.0.0.1:4177/button/", captured: 3, total: 40 };
+      },
+    });
+    stop = server.stop;
+
+    const res = await fetch(server.origin + "/v1/share", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1:6006",
+      },
+      body: JSON.stringify({
+        origin: "http://127.0.0.1:6006",
+        title: "Button",
+        storyId: "button--primary",
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      url: "http://127.0.0.1:4177/button/",
+      captured: 3,
+      total: 40,
+    });
+  });
+
+  it("onShare share-in-progress — 409", async () => {
+    const server = await startSidecar({
+      port: 0,
+      onShare: async () => ({ error: "share-in-progress" }),
+    });
+    stop = server.stop;
+
+    const res = await fetch(server.origin + "/v1/share", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1:6006",
+      },
+      body: JSON.stringify({ origin: "http://127.0.0.1:6006" }),
+    });
+    expect(res.status).toBe(409);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "http://127.0.0.1:6006",
+    );
+    expect(await res.json()).toEqual({ error: "share-in-progress" });
   });
 });

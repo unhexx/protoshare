@@ -11,7 +11,12 @@ import {
   type DetectedTarget,
   type WriteGalleryInput,
 } from "@protoshare/core";
-import type { ShareServer, SidecarShareRequest } from "@protoshare/share-app";
+import type {
+  ShareServer,
+  SidecarShareBusy,
+  SidecarShareRequest,
+  SidecarShareResponse,
+} from "@protoshare/share-app";
 
 export type WatchLiveResult =
   | { ok: true; url: string; stop: () => Promise<void> }
@@ -40,11 +45,14 @@ export type WatchDeps = {
 };
 
 export function createWatchHandler(deps: WatchDeps): {
-  onShare: (req: SidecarShareRequest) => Promise<{ url: string }>;
+  onShare: (
+    req: SidecarShareRequest,
+  ) => Promise<SidecarShareResponse | SidecarShareBusy>;
   stop: () => Promise<void>;
 } {
   let gallery: ShareServer | undefined;
   let stopLive: (() => Promise<void>) | undefined;
+  let inflight = false;
 
   const tearDown = async () => {
     await stopLive?.();
@@ -55,59 +63,70 @@ export function createWatchHandler(deps: WatchDeps): {
 
   return {
     async onShare(req) {
-      const target = await deps.detectTarget(req.origin);
-      const title = req.title?.trim() || target.title || target.kind;
-      const slug = toShareSlug(title);
-      const outDir = join(deps.outDir, slug);
-      await mkdir(outDir, { recursive: true });
-      let shots: CaptureShot[];
+      if (inflight) return { error: "share-in-progress" };
+      inflight = true;
       try {
-        shots = await deps.captureTarget({
-          kind: target.kind,
-          origin: target.origin,
-          stories: target.stories,
+        const target = await deps.detectTarget(req.origin);
+        const title = req.title?.trim() || target.title || target.kind;
+        const slug = toShareSlug(title);
+        const outDir = join(deps.outDir, slug);
+        await mkdir(outDir, { recursive: true });
+        let shots: CaptureShot[];
+        try {
+          shots = await deps.captureTarget({
+            kind: target.kind,
+            origin: target.origin,
+            stories: target.stories,
+            storyId: req.storyId,
+            outDir,
+          });
+        } catch (err) {
+          if (isMissingChromiumError(err)) {
+            (deps.error ?? console.error)(CHROMIUM_INSTALL_HINT);
+          }
+          throw err;
+        }
+        const captured = shots.length;
+        const total = target.kind === "storybook" ? target.stories.length : 1;
+        await deps.writeGallery({
           outDir,
-        });
-      } catch (err) {
-        if (isMissingChromiumError(err)) {
-          (deps.error ?? console.error)(CHROMIUM_INSTALL_HINT);
-        }
-        throw err;
-      }
-      await deps.writeGallery({
-        outDir,
-        title,
-        origin: target.origin,
-        shots,
-        slug,
-      });
-      await tearDown();
-      gallery = await deps.startShareServer({
-        root: outDir,
-        port: deps.galleryPort,
-      });
-      let url = gallery.origin;
-      if (deps.live !== false && deps.tryZrokShare) {
-        const live = await deps.tryZrokShare({
-          localOrigin: gallery.origin,
-          uniqueName: deps.uniqueName?.(slug),
-        });
-        if (live.ok) {
-          stopLive = live.stop;
-          url = live.url;
-        }
-      }
-      try {
-        await deps.recordShare?.({
-          slug,
           title,
           origin: target.origin,
-          url,
+          shots,
+          slug,
+          captured,
+          total,
         });
-      } catch {
-        // каталог не должен ронять шар
+        await tearDown();
+        gallery = await deps.startShareServer({
+          root: outDir,
+          port: deps.galleryPort,
+        });
+        let url = gallery.origin;
+        if (deps.live !== false && deps.tryZrokShare) {
+          const live = await deps.tryZrokShare({
+            localOrigin: gallery.origin,
+            uniqueName: deps.uniqueName?.(slug),
+          });
+          if (live.ok) {
+            stopLive = live.stop;
+            url = live.url;
+          }
+        }
+        try {
+          await deps.recordShare?.({
+            slug,
+            title,
+            origin: target.origin,
+            url,
+          });
+        } catch {
+          // каталог не должен ронять шар
+        }
+        return { url, captured, total };
+      } finally {
+        inflight = false;
       }
-      return { url };
     },
     stop: tearDown,
   };

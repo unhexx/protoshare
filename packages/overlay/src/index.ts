@@ -1,5 +1,6 @@
 export { injectOverlay, OVERLAY_SCRIPT_SRC } from "./inject.ts";
 export {
+  DEFAULT_SHARE_TIMEOUT_MS,
   DEFAULT_SIDECAR,
   requestShare,
   shareCommand,

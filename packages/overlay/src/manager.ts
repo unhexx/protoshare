@@ -1,4 +1,8 @@
-import { requestShare } from "./share.ts";
+import {
+  clipboardTextForShare,
+  requestShare,
+  statusForShare,
+} from "./share.ts";
 
 export const ADDON_ID = "protoshare";
 export const TOOL_ID = "protoshare/tool";
@@ -17,6 +21,7 @@ export type ShareToolHost = {
   ) => unknown;
   getOrigin: () => string;
   getTitle?: () => string | undefined;
+  getStoryId?: () => string | undefined;
   sidecarOrigin?: string;
   fetchImpl?: typeof fetch;
   clipboardWrite?: (text: string) => Promise<void>;
@@ -26,22 +31,32 @@ export type ShareToolHost = {
 export async function onShareClick(opts: {
   origin: string;
   title?: string;
+  storyId?: string;
   sidecarOrigin?: string;
   fetchImpl?: typeof fetch;
   clipboardWrite?: (text: string) => Promise<void>;
+  onStatus?: (text: string) => void;
 }): Promise<{ text: string; copied: boolean }> {
+  opts.onStatus?.("Capturing…");
   const result = await requestShare({
     origin: opts.origin,
     title: opts.title,
+    storyId: opts.storyId,
     sidecarOrigin: opts.sidecarOrigin,
     fetchImpl: opts.fetchImpl,
   });
-  const text = result.ok ? result.url : result.command;
-  if (!opts.clipboardWrite) return { text, copied: false };
+  const text = statusForShare(result);
+  const copyText = clipboardTextForShare(result);
+  if (!opts.clipboardWrite || copyText === undefined) {
+    opts.onStatus?.(text);
+    return { text, copied: false };
+  }
   try {
-    await opts.clipboardWrite(text);
+    await opts.clipboardWrite(copyText);
+    opts.onStatus?.(text);
     return { text, copied: true };
   } catch {
+    opts.onStatus?.(text);
     return { text, copied: false };
   }
 }
@@ -58,11 +73,11 @@ export function createShareButtonRender(host: ShareToolHost): () => unknown {
           onShareClick({
             origin: host.getOrigin(),
             title: host.getTitle?.(),
+            storyId: host.getStoryId?.(),
             sidecarOrigin: host.sidecarOrigin,
             fetchImpl: host.fetchImpl,
             clipboardWrite: host.clipboardWrite,
-          }).then((out) => {
-            host.onStatus?.(out.text);
+            onStatus: host.onStatus,
           }),
       },
       "Share",

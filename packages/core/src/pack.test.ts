@@ -34,4 +34,20 @@ describe("packGallery", () => {
     const names = tar.toString("latin1");
     expect(names.match(/gallery\.tgz/g) ?? []).toHaveLength(0);
   });
+
+  it("не кладёт shots-raw/ в архив", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-pack-"));
+    await mkdir(join(dir, "shots"), { recursive: true });
+    await mkdir(join(dir, "shots-raw"), { recursive: true });
+    await writeFile(join(dir, "index.html"), "<p>gallery</p>");
+    await writeFile(join(dir, "shots", "preview.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    await writeFile(join(dir, "shots-raw", "raw.png"), Buffer.from([0xff, 0xd8, 0xff]));
+
+    const tar = gunzipSync(await readFile(await packGallery(dir)));
+    const text = tar.toString("latin1");
+    expect(text).toContain("index.html");
+    expect(text).toContain("shots/preview.png");
+    expect(text).not.toContain("shots-raw");
+    expect(text).not.toContain("raw.png");
+  });
 });

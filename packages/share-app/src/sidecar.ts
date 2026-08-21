@@ -4,10 +4,17 @@ import { listenHono, type ShareServer } from "./server.ts";
 export type SidecarShareRequest = {
   origin: string;
   title?: string;
+  storyId?: string;
 };
 
 export type SidecarShareResponse = {
   url: string;
+  captured: number;
+  total: number;
+};
+
+export type SidecarShareBusy = {
+  error: "share-in-progress";
 };
 
 export function isLoopbackOrigin(origin: string): boolean {
@@ -44,7 +51,9 @@ export function isLocalPreviewOrigin(origin: string): boolean {
 
 export async function startSidecar(opts: {
   port: number;
-  onShare: (req: SidecarShareRequest) => Promise<SidecarShareResponse>;
+  onShare: (
+    req: SidecarShareRequest,
+  ) => Promise<SidecarShareResponse | SidecarShareBusy>;
 }): Promise<ShareServer> {
   const app = new Hono();
 
@@ -86,10 +95,21 @@ export async function startSidecar(opts: {
       return c.json({ error: "not-local" }, 400);
     }
     const title = typeof rec.title === "string" ? rec.title : undefined;
+    const storyId =
+      typeof rec.storyId === "string" && rec.storyId.trim().length > 0
+        ? rec.storyId.trim()
+        : undefined;
     try {
-      const result = await opts.onShare({ origin, title });
+      const result = await opts.onShare({ origin, title, storyId });
+      if ("error" in result) {
+        return c.json({ error: result.error }, 409);
+      }
       if (!result?.url) return c.json({ error: "share-failed" }, 500);
-      return c.json({ url: result.url });
+      return c.json({
+        url: result.url,
+        captured: result.captured,
+        total: result.total,
+      });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       return c.json({ error: "share-failed", detail }, 500);

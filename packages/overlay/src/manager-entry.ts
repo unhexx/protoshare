@@ -1,4 +1,5 @@
 import { createShareButtonRender, registerShareAddon } from "./manager.ts";
+import { storyIdFromLocation } from "./share.ts";
 
 type ManagerMod = {
   addons: Parameters<typeof registerShareAddon>[0];
@@ -44,6 +45,7 @@ void loadManagerApi().then((mod) => {
       createElement,
       getOrigin: () => globalThis.location?.origin ?? "http://127.0.0.1:6006",
       getTitle: () => globalThis.document?.title,
+      getStoryId: () => storyIdFromLocation(globalThis.location?.search ?? ""),
       clipboardWrite: async (text) => {
         await navigator.clipboard.writeText(text);
       },

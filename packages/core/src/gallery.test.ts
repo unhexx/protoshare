@@ -24,12 +24,35 @@ describe("writeGallery", () => {
     const html = await readFile(join(dir, "gallery", "index.html"), "utf8");
     expect(html).toContain("Button / Primary");
     expect(html).toContain("shots/button--primary.png");
+    expect(html).toContain("frozen snapshot");
+    expect(html).toContain("1/1");
 
     const manifest = JSON.parse(
       await readFile(join(dir, "gallery", "manifest.json"), "utf8"),
     );
     expect(manifest.slug).toBe("button");
     expect(manifest.shots).toHaveLength(1);
+    expect(manifest.captured).toBe(1);
+    expect(manifest.total).toBe(1);
+  });
+
+  it("пишет frozen snapshot · n/N из captured/total", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-"));
+    await writeGallery({
+      outDir: join(dir, "gallery"),
+      title: "Button",
+      origin: "http://127.0.0.1:6006",
+      shots: [{ id: "button--primary", title: "Button / Primary", file: "missing.png" }],
+      captured: 3,
+      total: 40,
+    });
+    const html = await readFile(join(dir, "gallery", "index.html"), "utf8");
+    expect(html).toContain("protoshare · frozen snapshot · 3/40 · source http://127.0.0.1:6006");
+    const manifest = JSON.parse(
+      await readFile(join(dir, "gallery", "manifest.json"), "utf8"),
+    );
+    expect(manifest.captured).toBe(3);
+    expect(manifest.total).toBe(40);
   });
 
   it("принимает явный vanity-slug вместо заголовка", async () => {

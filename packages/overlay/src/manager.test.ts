@@ -26,6 +26,48 @@ describe("onShareClick", () => {
     expect(copied).toEqual(["https://checkout.share.zrok.io"]);
   });
 
+  it("пишет Capturing… до fetch и Captured n / N при числах", async () => {
+    const statuses: string[] = [];
+    const copied: string[] = [];
+    let fetchStarted = false;
+    const out = await onShareClick({
+      origin: "http://127.0.0.1:6006",
+      fetchImpl: async () => {
+        fetchStarted = true;
+        expect(statuses).toEqual(["Capturing…"]);
+        return new Response(
+          JSON.stringify({ url: "http://127.0.0.1:4177/", captured: 3, total: 40 }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      },
+      clipboardWrite: async (text) => {
+        copied.push(text);
+      },
+      onStatus: (text) => {
+        statuses.push(text);
+      },
+    });
+    expect(fetchStarted).toBe(true);
+    expect(out).toEqual({ text: "Captured 3 / 40 stories", copied: true });
+    expect(copied).toEqual(["http://127.0.0.1:4177/"]);
+    expect(statuses).toEqual(["Capturing…", "Captured 3 / 40 stories"]);
+  });
+
+  it("409 не копирует команду CLI", async () => {
+    const copied: string[] = [];
+    const out = await onShareClick({
+      origin: "http://127.0.0.1:6006",
+      fetchImpl: async () =>
+        new Response(JSON.stringify({ error: "share-in-progress" }), { status: 409 }),
+      clipboardWrite: async (text) => {
+        copied.push(text);
+      },
+    });
+    expect(out).toEqual({ text: "Share already in progress", copied: false });
+    expect(copied).toEqual([]);
+    expect(out.text).not.toContain("npx protoshare");
+  });
+
   it("если сайдкар молчит — копирует команду CLI", async () => {
     const out = await onShareClick({
       origin: "http://127.0.0.1:5173",
@@ -70,11 +112,14 @@ describe("createShareButtonRender", () => {
       createElement: (type, props, ...children) => ({ type, props, children }),
       getOrigin: () => "http://127.0.0.1:6006",
       getTitle: () => "Storybook",
-      fetchImpl: async () =>
-        new Response(JSON.stringify({ url: "http://127.0.0.1:4177" }), {
+      getStoryId: () => "button--primary",
+      fetchImpl: async (_input, init) => {
+        expect(JSON.parse(String(init?.body)).storyId).toBe("button--primary");
+        return new Response(JSON.stringify({ url: "http://127.0.0.1:4177" }), {
           status: 200,
           headers: { "content-type": "application/json" },
-        }),
+        });
+      },
       onStatus: (text) => {
         statuses.push(text);
       },
@@ -88,6 +133,6 @@ describe("createShareButtonRender", () => {
     expect(node.props["data-protoshare"]).toBe("manager-share");
     expect(node.children).toContain("Share");
     await node.props.onClick?.();
-    expect(statuses).toEqual(["http://127.0.0.1:4177"]);
+    expect(statuses).toEqual(["Capturing…", "http://127.0.0.1:4177"]);
   });
 });

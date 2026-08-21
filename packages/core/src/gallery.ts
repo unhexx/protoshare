@@ -14,6 +14,8 @@ export type WriteGalleryInput = {
   origin: string;
   shots: ShotInput[];
   slug?: string;
+  captured?: number;
+  total?: number;
 };
 
 function safeShotName(id: string): string {
@@ -32,6 +34,8 @@ function renderHtml(
   title: string,
   origin: string,
   shots: { id: string; title: string; href: string }[],
+  captured: number,
+  total: number,
 ): string {
   const cards = shots
     .map(
@@ -84,7 +88,7 @@ function renderHtml(
 <body>
   <header>
     <h1>${escapeHtml(title)}</h1>
-    <p class="meta">protoshare · source ${escapeHtml(origin)}</p>
+    <p class="meta">protoshare · frozen snapshot · ${captured}/${total} · source ${escapeHtml(origin)}</p>
   </header>
   <main>${cards || "<p>No snapshots.</p>"}</main>
 </body>
@@ -109,9 +113,12 @@ export async function writeGallery(input: WriteGalleryInput): Promise<{ slug: st
     published.push({ id: shot.id, title: shot.title, href: `shots/${name}` });
   }
 
+  const captured = input.captured ?? published.length;
+  const total = input.total ?? published.length;
+
   await writeFile(
     join(input.outDir, "index.html"),
-    renderHtml(input.title, input.origin, published),
+    renderHtml(input.title, input.origin, published, captured, total),
     "utf8",
   );
   await writeFile(
@@ -122,6 +129,8 @@ export async function writeGallery(input: WriteGalleryInput): Promise<{ slug: st
         title: input.title,
         origin: input.origin,
         shots: published,
+        captured,
+        total,
       },
       null,
       2,

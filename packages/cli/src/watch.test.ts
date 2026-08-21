@@ -30,7 +30,7 @@ describe("createWatchHandler", () => {
     });
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
-    expect(result.url).toBe("http://127.0.0.1:4177");
+    expect(result).toMatchObject({ url: "http://127.0.0.1:4177", captured: 1, total: 1 });
     expect(captured).toEqual(["http://127.0.0.1:5173"]);
     await handler.stop();
   });
@@ -68,7 +68,7 @@ describe("createWatchHandler", () => {
     const second = await handler.onShare({ origin: "http://127.0.0.1:5173" });
     expect(starts).toBe(2);
     expect(stops).toBe(1);
-    expect(second.url).toBe("http://127.0.0.1:4172");
+    expect(second).toMatchObject({ url: "http://127.0.0.1:4172" });
 
     await handler.stop();
     expect(stops).toBe(2);
@@ -104,7 +104,7 @@ describe("createWatchHandler", () => {
     });
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
-    expect(result.url).toBe("https://checkout.share.zrok.io");
+    expect(result).toMatchObject({ url: "https://checkout.share.zrok.io" });
     await handler.stop();
   });
 
@@ -129,7 +129,7 @@ describe("createWatchHandler", () => {
     });
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
-    expect(result.url).toBe("http://127.0.0.1:4177");
+    expect(result).toMatchObject({ url: "http://127.0.0.1:4177" });
     await handler.stop();
   });
 
@@ -195,7 +195,7 @@ describe("createWatchHandler", () => {
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
     expect(called).toBe(0);
-    expect(result.url).toBe("http://127.0.0.1:4177");
+    expect(result).toMatchObject({ url: "http://127.0.0.1:4177" });
     await handler.stop();
   });
 
@@ -229,7 +229,7 @@ describe("createWatchHandler", () => {
     });
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
-    expect(result.url).toBe("https://checkout.share.zrok.io");
+    expect(result).toMatchObject({ url: "https://checkout.share.zrok.io" });
     expect(recorded).toEqual([
       {
         slug: "checkout",
@@ -264,7 +264,92 @@ describe("createWatchHandler", () => {
     });
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
-    expect(result.url).toBe("http://127.0.0.1:4177");
+    expect(result).toMatchObject({ url: "http://127.0.0.1:4177" });
+    await handler.stop();
+  });
+
+  it("передаёт storyId в захват и отдаёт captured/total", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    let seen: string | undefined;
+    const galleries: Array<{ captured?: number; total?: number }> = [];
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "storybook",
+        origin,
+        title: "Button",
+        stories: [
+          { id: "a--one", title: "A", name: "One" },
+          { id: "button--primary", title: "Button", name: "Primary" },
+        ],
+      }),
+      captureTarget: async (input) => {
+        seen = input.storyId;
+        return [{ id: "button--primary", title: "Button / Primary", file: join(outDir, "x.png") }];
+      },
+      writeGallery: async (input) => {
+        galleries.push({ captured: input.captured, total: input.total });
+        return { slug: "button", outDir: input.outDir };
+      },
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+    });
+
+    const result = await handler.onShare({
+      origin: "http://127.0.0.1:6006",
+      storyId: "button--primary",
+    });
+    expect(seen).toBe("button--primary");
+    expect(result).toEqual({
+      url: "http://127.0.0.1:4177",
+      captured: 1,
+      total: 2,
+    });
+    expect(galleries).toEqual([{ captured: 1, total: 2 }]);
+    await handler.stop();
+  });
+
+  it("вторая шара пока первая идёт — share-in-progress", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let captures = 0;
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Vite",
+        stories: [],
+      }),
+      captureTarget: async () => {
+        captures += 1;
+        await hold;
+        return [{ id: "preview", title: "Preview", file: join(outDir, "x.png") }];
+      },
+      writeGallery: async (input) => ({ slug: "vite", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+    });
+
+    const first = handler.onShare({ origin: "http://127.0.0.1:5173" });
+    const second = await handler.onShare({ origin: "http://127.0.0.1:6006" });
+    expect(second).toEqual({ error: "share-in-progress" });
+    release();
+    await expect(first).resolves.toMatchObject({
+      url: "http://127.0.0.1:4177",
+      captured: 1,
+      total: 1,
+    });
+    expect(captures).toBe(1);
     await handler.stop();
   });
 

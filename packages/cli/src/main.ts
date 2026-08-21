@@ -8,7 +8,10 @@ import {
   scanLocalPreviews,
   toShareSlug,
   packGallery,
+  s3ConfigFromEnv,
+  s3ObjectKey,
   uploadArchive,
+  uploadArchiveS3,
   writeGallery,
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
@@ -94,16 +97,27 @@ const main = defineCommand({
       (typeof args.uploadUrl === "string" && args.uploadUrl.trim()) ||
       process.env.PROTOSHARE_UPLOAD_URL ||
       "";
-    if (args.pack || uploadUrl) {
+    const s3 = s3ConfigFromEnv();
+    const publicUrl =
+      (typeof args.publicUrl === "string" && args.publicUrl.trim()) ||
+      process.env.PROTOSHARE_PUBLIC_URL;
+    if (args.pack || uploadUrl || s3) {
       const archive = await packGallery(outDir);
       console.log(`Pack:    ${archive}`);
       if (uploadUrl) {
         const remote = await uploadArchive({
           file: archive,
           putUrl: uploadUrl,
-          publicUrl:
-            (typeof args.publicUrl === "string" && args.publicUrl.trim()) ||
-            process.env.PROTOSHARE_PUBLIC_URL,
+          publicUrl,
+        });
+        if (remote.ok) console.log(`Remote:  ${remote.url}`);
+        else console.log(`Remote:  пропуск (${remote.detail})`);
+      } else if (s3) {
+        const remote = await uploadArchiveS3({
+          file: archive,
+          config: s3,
+          key: s3ObjectKey(s3.prefix, slug),
+          publicUrl,
         });
         if (remote.ok) console.log(`Remote:  ${remote.url}`);
         else console.log(`Remote:  пропуск (${remote.detail})`);

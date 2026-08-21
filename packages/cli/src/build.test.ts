@@ -58,5 +58,6 @@ describe("buildCli", () => {
     expect(stdout).toMatch(/\brm\b/);
     expect(stdout).toMatch(/--no-copy|--copy/);
     expect(stdout).toMatch(/--no-browser|--browser/);
+    expect(stdout).toMatch(/--no-qr|--qr/);
   });
 });

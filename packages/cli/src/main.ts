@@ -18,6 +18,7 @@ import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
 import { startShareServer, startSidecar } from "@protoshare/share-app";
 import { openInBrowser } from "./browser.ts";
 import { copyToClipboard } from "./clipboard.ts";
+import { renderShareQr } from "./qr.ts";
 import { runList } from "./list.ts";
 import { pickPreview } from "./pick.ts";
 import { runRm } from "./rm.ts";
@@ -112,6 +113,11 @@ const main = defineCommand({
     browser: {
       type: "boolean",
       description: "Open the share URL in the default browser",
+      default: true,
+    },
+    qr: {
+      type: "boolean",
+      description: "Print a terminal QR of the share URL",
       default: true,
     },
   },
@@ -243,7 +249,7 @@ await runMain(main);
 
 async function noteShareUrl(
   url: string,
-  args: { copy?: unknown; browser?: unknown },
+  args: { copy?: unknown; browser?: unknown; qr?: unknown },
 ): Promise<void> {
   if (args.copy !== false) {
     const copied = await copyToClipboard(url);
@@ -254,6 +260,13 @@ async function noteShareUrl(
     const opened = await openInBrowser(url);
     if (opened.ok) console.log("Browser:  URL");
     else console.log(`Browser:  пропуск (${opened.detail})`);
+  }
+  if (args.qr !== false) {
+    const qr = renderShareQr(url);
+    if (qr.ok) {
+      console.log(qr.text);
+      console.log("QR:      URL");
+    } else console.log(`QR:      пропуск (${qr.detail})`);
   }
 }
 

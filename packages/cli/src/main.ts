@@ -1,4 +1,3 @@
-#!/usr/bin/env npx tsx
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { defineCommand, runMain } from "citty";

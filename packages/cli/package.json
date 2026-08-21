@@ -1,15 +1,36 @@
 {
   "name": "protoshare",
   "version": "0.1.0",
+  "description": "Share local Storybook/Vite/Next prototypes as a snapshot gallery",
+  "license": "MIT",
   "type": "module",
   "bin": {
-    "protoshare": "./src/main.ts"
+    "protoshare": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unhexx/protoshare.git",
+    "directory": "packages/cli"
+  },
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "prepack": "tsx src/build.ts"
   },
   "dependencies": {
+    "playwright": "^1.55.0"
+  },
+  "devDependencies": {
     "@protoshare/capture": "workspace:*",
     "@protoshare/core": "workspace:*",
     "@protoshare/live": "workspace:*",
     "@protoshare/share-app": "workspace:*",
-    "citty": "^0.1.6"
+    "citty": "^0.1.6",
+    "esbuild": "^0.25.9"
   }
 }

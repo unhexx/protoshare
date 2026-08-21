@@ -10,6 +10,7 @@ Snapshots first: a reviewer can open the gallery even if your laptop sleeps. If 
 # Node 20+, pnpm 10
 npx pnpm@10 install
 npx pnpm@10 --filter @protoshare/capture exec playwright install chromium
+npx pnpm@10 build   # packages/cli/dist/main.js — npm bin `protoshare`
 
 # Storybook / Vite / Next must already be running, or pass a URL
 npx pnpm@10 protoshare

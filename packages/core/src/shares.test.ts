@@ -87,6 +87,54 @@ describe("recordShare", () => {
     });
   });
 
+  it("не затирает S3 live/gallery URL при повторной шаре", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-shares-"));
+    const config = { url: `file:${join(dir, "shares.db")}` };
+    await recordShare({
+      slug: "checkout",
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      url: "https://cdn.example/checkout.tgz",
+      createdAt: new Date("2026-08-21T10:00:00.000Z"),
+      config,
+    });
+    const rec = await recordShare({
+      slug: "checkout",
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      url: "https://checkout.share.zrok.io",
+      createdAt: new Date("2026-08-21T14:00:00.000Z"),
+      config,
+    });
+    expect(rec.ok).toBe(true);
+    if (!rec.ok) return;
+    expect(rec.share.url).toBe("https://cdn.example/checkout.tgz");
+    const list = await listShares({ config });
+    expect(list[0]?.url).toBe("https://cdn.example/checkout.tgz");
+  });
+
+  it("remote URL заменяет прежний live", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-shares-"));
+    const config = { url: `file:${join(dir, "shares.db")}` };
+    await recordShare({
+      slug: "checkout",
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      url: "https://checkout.share.zrok.io",
+      config,
+    });
+    const rec = await recordShare({
+      slug: "checkout",
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      url: "https://cdn.example/checkout.tgz",
+      config,
+    });
+    expect(rec.ok).toBe(true);
+    if (!rec.ok) return;
+    expect(rec.share.url).toBe("https://cdn.example/checkout.tgz");
+  });
+
   it("битый url — ok:false без throw", async () => {
     const rec = await recordShare({
       slug: "x",

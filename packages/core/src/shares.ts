@@ -93,6 +93,19 @@ async function openDb(config: SharesConfig) {
   return { client, db };
 }
 
+function isEphemeralShareUrl(url: string | undefined | null): boolean {
+  if (!url?.trim()) return true;
+  try {
+    const host = new URL(url.trim()).hostname.toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+    if (host === "share.zrok.io" || host.endsWith(".share.zrok.io")) return true;
+    if (host === "trycloudflare.com" || host.endsWith(".trycloudflare.com")) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 function toRow(input: RecordShareInput, createdAt: string): ShareRow {
   const row: ShareRow = {
     slug: input.slug,
@@ -104,6 +117,11 @@ function toRow(input: RecordShareInput, createdAt: string): ShareRow {
   return row;
 }
 
+function catalogUrlOnConflict(existing: string | null | undefined, next: string | undefined): string | undefined {
+  if (existing && isEphemeralShareUrl(next) && !isEphemeralShareUrl(existing)) return existing;
+  return next;
+}
+
 /** Пишет шару в libsql. Ошибка каталога не должна ронять share. */
 export async function recordShare(input: RecordShareInput): Promise<RecordShareResult> {
   const config = input.config ?? sharesConfigFromEnv();
@@ -112,25 +130,34 @@ export async function recordShare(input: RecordShareInput): Promise<RecordShareR
   try {
     const { client, db } = await openDb(config);
     try {
+      const existing = await db.select().from(shares).where(eq(shares.slug, share.slug)).limit(1);
+      const url = catalogUrlOnConflict(existing[0]?.url, share.url);
+      const stored: ShareRow = {
+        slug: share.slug,
+        title: share.title,
+        origin: share.origin,
+        createdAt: share.createdAt,
+      };
+      if (url) stored.url = url;
       await db
         .insert(shares)
         .values({
-          slug: share.slug,
-          title: share.title,
-          origin: share.origin,
-          url: share.url ?? null,
-          createdAt: share.createdAt,
+          slug: stored.slug,
+          title: stored.title,
+          origin: stored.origin,
+          url: stored.url ?? null,
+          createdAt: stored.createdAt,
         })
         .onConflictDoUpdate({
           target: shares.slug,
           set: {
-            title: share.title,
-            origin: share.origin,
-            url: share.url ?? null,
-            createdAt: share.createdAt,
+            title: stored.title,
+            origin: stored.origin,
+            url: stored.url ?? null,
+            createdAt: stored.createdAt,
           },
         });
-      return { ok: true, share };
+      return { ok: true, share: stored };
     } finally {
       client.close();
     }

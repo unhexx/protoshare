@@ -172,7 +172,11 @@ describe("runOpen", () => {
         origin: "http://127.0.0.1:4177",
         stop: async () => {},
       }),
-      tryLiveShare: async () => ({ ok: false, detail: "zrok не найден в PATH" }),
+      tryLiveShare: async () => ({
+        ok: false,
+        reason: "missing-binary",
+        detail: "zrok не найден в PATH",
+      }),
       log: (line) => lines.push(line),
     });
     expect(result.ok).toBe(true);

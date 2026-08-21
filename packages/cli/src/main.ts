@@ -23,7 +23,7 @@ import { runList } from "./list.ts";
 import { runOpen } from "./open.ts";
 import { pickPreview } from "./pick.ts";
 import { runRm } from "./rm.ts";
-import { resolveShareUrl } from "./share-url.ts";
+import { persistShare } from "./share-url.ts";
 import { createWatchHandler } from "./watch.ts";
 
 const listCommand = defineCommand({
@@ -265,67 +265,81 @@ const main = defineCommand({
     }
     const remote = remoteUrl || undefined;
     if (args.open === false) {
-      await noteCatalog({
+      const persisted = await persistShare({
         slug,
         title,
         origin: target.origin,
-        url: resolveShareUrl({ remote }, "catalog"),
+        remote,
       });
-      const sessionUrl = resolveShareUrl({ remote }, "session");
-      if (sessionUrl) await noteShareUrl(sessionUrl, args);
+      noteCatalog(persisted.catalog);
+      if (persisted.sessionUrl) await noteShareUrl(persisted.sessionUrl, args);
       return;
     }
 
     const galleryPort = Number(args.port);
-    const server = await startShareServer({
-      root: outDir,
-      port: Number.isFinite(galleryPort) ? galleryPort : 4177,
-    });
-    console.log(`Gallery: ${server.origin}`);
-
-    let stopLive: (() => Promise<void>) | undefined;
-    let liveUrl: string | undefined;
-    if (args.live !== false) {
-      const live = await tryLiveShare({
-        localOrigin: server.origin,
-        uniqueName: toZrokUniqueName(slug),
+    let cataloged = false;
+    try {
+      const server = await startShareServer({
+        root: outDir,
+        port: Number.isFinite(galleryPort) ? galleryPort : 4177,
       });
-      if (live.ok) {
-        console.log(`Live:    ${live.provider} ${live.url}`);
-        stopLive = live.stop;
-        liveUrl = live.url;
-      } else {
-        console.log(`Live:    пропуск (${live.detail})`);
-      }
-    }
-    const parts = { live: liveUrl, remote, gallery: server.origin };
-    await noteCatalog({
-      slug,
-      title,
-      origin: target.origin,
-      url: resolveShareUrl(parts, "catalog"),
-    });
-    await noteShareUrl(resolveShareUrl(parts, "session") ?? server.origin, args);
+      console.log(`Gallery: ${server.origin}`);
 
-    console.log("Ctrl+C чтобы остановить.");
-    await new Promise<void>((resolve) => {
-      process.on("SIGINT", () => resolve());
-      process.on("SIGTERM", () => resolve());
-    });
-    await stopLive?.();
-    await server.stop();
+      let stopLive: (() => Promise<void>) | undefined;
+      let liveUrl: string | undefined;
+      if (args.live !== false) {
+        const live = await tryLiveShare({
+          localOrigin: server.origin,
+          uniqueName: toZrokUniqueName(slug),
+        });
+        if (live.ok) {
+          console.log(`Live:    ${live.provider} ${live.url}`);
+          stopLive = live.stop;
+          liveUrl = live.url;
+        } else {
+          console.log(`Live:    пропуск (${live.detail})`);
+        }
+      }
+      const persisted = await persistShare({
+        slug,
+        title,
+        origin: target.origin,
+        live: liveUrl,
+        remote,
+        gallery: server.origin,
+      });
+      cataloged = true;
+      noteCatalog(persisted.catalog);
+      await noteShareUrl(persisted.sessionUrl ?? server.origin, args);
+
+      console.log("Ctrl+C чтобы остановить.");
+      await new Promise<void>((resolve) => {
+        process.on("SIGINT", () => resolve());
+        process.on("SIGTERM", () => resolve());
+      });
+      await stopLive?.();
+      await server.stop();
+    } catch (err) {
+      // pack/upload уже прошёл — remote не должен пропасть из-за EADDRINUSE
+      if (!cataloged) {
+        const persisted = await persistShare({
+          slug,
+          title,
+          origin: target.origin,
+          remote,
+        });
+        noteCatalog(persisted.catalog);
+      }
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error(`Gallery: пропуск (${detail})`);
+      process.exitCode = 1;
+    }
   },
 });
 
 await runMain(main);
 
-async function noteCatalog(input: {
-  slug: string;
-  title: string;
-  origin: string;
-  url?: string;
-}): Promise<void> {
-  const catalog = await recordShare(input);
+function noteCatalog(catalog: { ok: true; share: { slug: string } } | { ok: false; detail: string }): void {
   if (catalog.ok) console.log(`Catalog: ${catalog.share.slug}`);
   else console.log(`Catalog: пропуск (${catalog.detail})`);
 }

@@ -3,13 +3,15 @@ import {
   findGalleryDir,
   type FindGalleryResult,
 } from "@protoshare/core";
-import { tryLiveShare as defaultTryLiveShare, toZrokUniqueName } from "@protoshare/live";
+import {
+  tryLiveShare as defaultTryLiveShare,
+  toZrokUniqueName,
+  type LiveShareResult,
+} from "@protoshare/live";
 import { startShareServer, type ShareServer } from "@protoshare/share-app";
 import { DEFAULT_OUT_DIR } from "./rm.ts";
 
-export type OpenLiveResult =
-  | { ok: true; provider: "zrok" | "cloudflared"; url: string; stop: () => Promise<void> }
-  | { ok: false; detail?: string };
+export type OpenLiveResult = LiveShareResult;
 
 export type RunOpenOpts = {
   slug?: string;

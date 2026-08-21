@@ -2,7 +2,13 @@ import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { findGalleryDir, galleryDir, removeGalleryDir, writeGallery } from "./gallery.ts";
+import {
+  findGalleryDir,
+  galleryDir,
+  readGalleryManifest,
+  removeGalleryDir,
+  writeGallery,
+} from "./gallery.ts";
 
 describe("writeGallery", () => {
   it("кладёт index.html и манифест со снимками", async () => {
@@ -127,5 +133,31 @@ describe("findGalleryDir", () => {
   it("небезопасный slug — ok:false", async () => {
     const result = await findGalleryDir({ outRoot: "/tmp/out", slug: ".." });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("readGalleryManifest", () => {
+  it("читает title и origin", async () => {
+    const root = await mkdtemp(join(tmpdir(), "protoshare-manifest-"));
+    const outDir = join(root, "checkout");
+    await writeGallery({
+      outDir,
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      slug: "checkout",
+      shots: [],
+    });
+    await expect(readGalleryManifest(outDir)).resolves.toMatchObject({
+      slug: "checkout",
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+    });
+  });
+
+  it("нет файла / битый json — null", async () => {
+    const root = await mkdtemp(join(tmpdir(), "protoshare-manifest-"));
+    await expect(readGalleryManifest(root)).resolves.toBeNull();
+    await writeFile(join(root, "manifest.json"), "{not json");
+    await expect(readGalleryManifest(root)).resolves.toBeNull();
   });
 });

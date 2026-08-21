@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { toShareSlug } from "./slug.ts";
 
@@ -130,6 +130,30 @@ export async function writeGallery(input: WriteGalleryInput): Promise<{ slug: st
   );
 
   return { slug, outDir: input.outDir };
+}
+
+export type GalleryManifest = {
+  slug: string;
+  title: string;
+  origin: string;
+};
+
+/** Читает manifest.json шары. Нет файла / битый json — null. */
+export async function readGalleryManifest(dir: string): Promise<GalleryManifest | null> {
+  try {
+    const raw = JSON.parse(await readFile(join(dir, "manifest.json"), "utf8")) as {
+      slug?: unknown;
+      title?: unknown;
+      origin?: unknown;
+    };
+    const slug = typeof raw.slug === "string" ? raw.slug.trim() : "";
+    const title = typeof raw.title === "string" ? raw.title.trim() : "";
+    const origin = typeof raw.origin === "string" ? raw.origin.trim() : "";
+    if (!slug || !title || !origin) return null;
+    return { slug, title, origin };
+  } catch {
+    return null;
+  }
 }
 
 /** Каталог шары внутри outRoot. Пустой / без букв-цифр — null. */

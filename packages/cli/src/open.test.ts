@@ -110,6 +110,7 @@ describe("runOpen", () => {
         };
       },
       log: (line) => lines.push(line),
+      recordShare: async () => ({ ok: true, share: { slug: "checkout" } }),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -118,6 +119,66 @@ describe("runOpen", () => {
     await result.stop();
     expect(liveStops).toBe(1);
     expect(galleryStops).toBe(1);
+  });
+
+  it("пишет live URL в каталог", async () => {
+    const recorded: { slug: string; title: string; origin: string; url?: string }[] = [];
+    const lines: string[] = [];
+    const result = await runOpen({
+      slug: "checkout",
+      findGalleryDir: async () => ({ ok: true, dir: "/tmp/out/checkout", slug: "checkout" }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      tryLiveShare: async () => ({
+        ok: true,
+        url: "https://checkout.share.zrok.io",
+        stop: async () => {},
+      }),
+      readManifest: async (dir) => {
+        expect(dir).toBe("/tmp/out/checkout");
+        return { title: "Checkout", origin: "http://127.0.0.1:6006" };
+      },
+      recordShare: async (input) => {
+        recorded.push(input);
+        return { ok: true, share: { slug: input.slug } };
+      },
+      log: (line) => lines.push(line),
+    });
+    expect(result.ok).toBe(true);
+    expect(recorded).toEqual([
+      {
+        slug: "checkout",
+        title: "Checkout",
+        origin: "http://127.0.0.1:6006",
+        url: "https://checkout.share.zrok.io",
+      },
+    ]);
+    expect(lines.join("\n")).toMatch(/catalog/i);
+  });
+
+  it("ошибка каталога не роняет open", async () => {
+    const result = await runOpen({
+      slug: "checkout",
+      findGalleryDir: async () => ({ ok: true, dir: "/tmp/out/checkout", slug: "checkout" }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      tryLiveShare: async () => ({
+        ok: true,
+        url: "https://checkout.share.zrok.io",
+        stop: async () => {},
+      }),
+      recordShare: async () => {
+        throw new Error("libsql down");
+      },
+      log: () => {},
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.origin).toBe("https://checkout.share.zrok.io");
   });
 
   it("если zrok недоступен — остаётся локальная gallery", async () => {
@@ -130,6 +191,9 @@ describe("runOpen", () => {
         stop: async () => {},
       }),
       tryLiveShare: async () => ({ ok: false, detail: "zrok не найден в PATH" }),
+      recordShare: async () => {
+        throw new Error("should not record");
+      },
       log: (line) => lines.push(line),
     });
     expect(result.ok).toBe(true);

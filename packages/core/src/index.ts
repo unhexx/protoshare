@@ -1,9 +1,16 @@
 export { toShareSlug } from "./slug.ts";
 export { detectTarget, scanAllLocalPreviews, scanLocalPreviews } from "./detect.ts";
 export type { DetectedTarget, PreviewKind, StoryRef } from "./detect.ts";
-export { findGalleryDir, galleryDir, removeGalleryDir, writeGallery } from "./gallery.ts";
+export {
+  findGalleryDir,
+  galleryDir,
+  readGalleryManifest,
+  removeGalleryDir,
+  writeGallery,
+} from "./gallery.ts";
 export type {
   FindGalleryResult,
+  GalleryManifest,
   RemoveGalleryResult,
   ShotInput,
   WriteGalleryInput,

@@ -62,6 +62,10 @@ describe("startSidecar", () => {
     });
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-origin")).toBe(loopback);
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("POST");
+    expect(preflight.headers.get("access-control-allow-headers")).toContain(
+      "content-type",
+    );
     expect(preflight.headers.get("access-control-allow-credentials")).toBeNull();
 
     const res = await fetch(server.origin + "/v1/share", {
@@ -75,6 +79,68 @@ describe("startSidecar", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe(loopback);
     expect(res.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(await res.json()).toEqual({ url: "http://127.0.0.1:4177/" });
+  });
+
+  it("OPTIONS+POST с Origin http://[::1]:6006 — эхо и allow-headers", async () => {
+    const ipv6 = "http://[::1]:6006";
+    const server = await startSidecar({
+      port: 0,
+      onShare: async (req) => {
+        expect(req.origin).toBe("http://127.0.0.1:6006");
+        return { url: "http://127.0.0.1:4177/" };
+      },
+    });
+    stop = server.stop;
+
+    const preflight = await fetch(server.origin + "/v1/share", {
+      method: "OPTIONS",
+      headers: { origin: ipv6 },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe(ipv6);
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("POST");
+    expect(preflight.headers.get("access-control-allow-headers")).toContain(
+      "content-type",
+    );
+    expect(preflight.headers.get("access-control-allow-credentials")).toBeNull();
+
+    const res = await fetch(server.origin + "/v1/share", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: ipv6,
+      },
+      body: JSON.stringify({ origin: "http://127.0.0.1:6006" }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe(ipv6);
+    expect(await res.json()).toEqual({ url: "http://127.0.0.1:4177/" });
+  });
+
+  it("loopback Origin + RFC1918 тело — 200 и onShare с LAN origin", async () => {
+    const loopback = "http://127.0.0.1:6006";
+    const lan = "http://192.168.0.10:6006";
+    const server = await startSidecar({
+      port: 0,
+      onShare: async (req) => {
+        expect(req.origin).toBe(lan);
+        return { url: "http://127.0.0.1:4177/" };
+      },
+    });
+    stop = server.stop;
+
+    const res = await fetch(server.origin + "/v1/share", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: loopback,
+      },
+      body: JSON.stringify({ origin: lan, title: "LAN" }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe(loopback);
+    expect(res.headers.get("access-control-allow-origin")).not.toBe(lan);
     expect(await res.json()).toEqual({ url: "http://127.0.0.1:4177/" });
   });
 

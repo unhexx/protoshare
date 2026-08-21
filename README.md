@@ -46,6 +46,8 @@ export default { plugins: [protoshareOverlay()] };
 addons: ["@protoshare/overlay/storybook"];
 ```
 
+The Storybook preset injects the preview overlay and a manager toolbar Share button (same sidecar protocol).
+
 ## Stack (v0.1)
 
 TypeScript · pnpm workspaces · Hono · Playwright · citty. See `docs/superpowers/specs/2026-08-21-protoshare-stack-design.md`.

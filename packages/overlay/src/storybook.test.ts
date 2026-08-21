@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import preset, { previewHead } from "./storybook.ts";
+import { MANAGER_ENTRY } from "./manager.ts";
+import preset, { managerEntries, previewHead } from "./storybook.ts";
 
 describe("storybook preset", () => {
   it("кладёт overlay в previewHead", () => {
@@ -8,6 +9,11 @@ describe("storybook preset", () => {
     expect(head).toContain("<script>");
     expect(head).toContain("protoshare-overlay");
     expect(head).toContain("/v1/share");
+  });
+
+  it("добавляет manager toolbar entry", () => {
+    expect(managerEntries(["./other"])).toEqual(["./other", MANAGER_ENTRY]);
+    expect(preset.managerEntries).toBe(managerEntries);
   });
 
   it("экспортирует preset для addons[]", () => {

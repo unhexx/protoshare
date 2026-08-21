@@ -5,6 +5,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./vite": "./src/vite.ts",
-    "./storybook": "./src/storybook.ts"
+    "./storybook": "./src/storybook.ts",
+    "./manager": "./src/manager-entry.ts"
+  },
+  "peerDependencies": {
+    "storybook": "^8 || ^9"
+  },
+  "peerDependenciesMeta": {
+    "storybook": { "optional": true }
   }
 }

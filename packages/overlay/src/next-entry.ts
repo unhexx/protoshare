@@ -7,7 +7,7 @@ import type { OverlayClientOpts } from "./script.ts";
 /** Клиентский компонент для `app/layout.tsx`. */
 export function ProtoshareOverlay(props: OverlayClientOpts = {}) {
   useEffect(() => {
-    const script = injectOverlayScript(document, props);
+    const script = injectOverlayScript(document as unknown as Parameters<typeof injectOverlayScript>[0], props);
     return () => {
       script.remove?.();
     };

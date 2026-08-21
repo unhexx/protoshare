@@ -13,7 +13,7 @@ type OverlayPackage = {
   type?: string;
   files?: string[];
   engines?: { node?: string };
-  exports?: Record<string, string>;
+  exports?: Record<string, string | { types?: string; import?: string }>;
   publishConfig?: { access?: string };
   repository?: { url?: string };
   peerDependencies?: Record<string, string>;
@@ -33,11 +33,11 @@ describe("npm package @protoshare/overlay", () => {
     expect(pkg.repository?.url).toMatch(/github\.com\/unhexx\/protoshare/);
     expect(pkg.publishConfig?.access).toBe("public");
     expect(pkg.exports).toMatchObject({
-      ".": "./dist/index.js",
-      "./vite": "./dist/vite.js",
-      "./storybook": "./dist/storybook.js",
-      "./manager": "./dist/manager.js",
-      "./next": "./dist/next.js",
+      ".": { types: "./dist/index.d.ts", import: "./dist/index.js" },
+      "./vite": { types: "./dist/vite.d.ts", import: "./dist/vite.js" },
+      "./storybook": { types: "./dist/storybook.d.ts", import: "./dist/storybook.js" },
+      "./manager": { types: "./dist/manager-entry.d.ts", import: "./dist/manager.js" },
+      "./next": { types: "./dist/next-entry.d.ts", import: "./dist/next.js" },
     });
     expect(pkg.peerDependencies?.react).toBeTruthy();
     expect(pkg.peerDependencies?.storybook).toBeTruthy();
@@ -61,5 +61,14 @@ describe("buildOverlay", () => {
       pathToFileURL(join(dist, "vite.js")).href
     )) as { protoshareOverlay: () => { name: string } };
     expect(protoshareOverlay().name).toBe("protoshare-overlay");
+
+    const viteDts = await readFile(join(dist, "vite.d.ts"), "utf8");
+    expect(viteDts).toContain("protoshareOverlay");
+    expect(viteDts).not.toMatch(/from ["']\.\/script\.ts["']/);
+    expect(viteDts).toMatch(/from ["']\.\/script\.js["']/);
+    const indexDts = await readFile(join(dist, "index.d.ts"), "utf8");
+    expect(indexDts).toContain("requestShare");
+    const nextDts = await readFile(join(dist, "next-entry.d.ts"), "utf8");
+    expect(nextDts).toContain("ProtoshareOverlay");
   });
 });

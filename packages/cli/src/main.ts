@@ -212,6 +212,7 @@ async function runWatch(args: {
     live: args.live !== false,
     tryZrokShare: tryLiveShare,
     uniqueName: toZrokUniqueName,
+    recordShare,
   });
   const sidecar = await startSidecar({
     port: Number.isFinite(sidecarPort) ? sidecarPort : 4178,

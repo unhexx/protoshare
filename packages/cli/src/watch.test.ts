@@ -197,4 +197,73 @@ describe("createWatchHandler", () => {
     expect(result.url).toBe("http://127.0.0.1:4177");
     await handler.stop();
   });
+
+  it("пишет шару в каталог с публичным URL", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    const recorded: Array<{ slug: string; title: string; origin: string; url?: string }> = [];
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Checkout",
+        stories: [],
+      }),
+      captureTarget: async () => [],
+      writeGallery: async (input) => ({ slug: input.slug ?? "checkout", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      tryZrokShare: async () => ({
+        ok: true,
+        url: "https://checkout.share.zrok.io",
+        stop: async () => {},
+      }),
+      recordShare: async (input) => {
+        recorded.push(input);
+        return { ok: true };
+      },
+    });
+
+    const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
+    expect(result.url).toBe("https://checkout.share.zrok.io");
+    expect(recorded).toEqual([
+      {
+        slug: "checkout",
+        title: "Checkout",
+        origin: "http://127.0.0.1:5173",
+        url: "https://checkout.share.zrok.io",
+      },
+    ]);
+    await handler.stop();
+  });
+
+  it("ошибка каталога не ломает шар", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Vite",
+        stories: [],
+      }),
+      captureTarget: async () => [],
+      writeGallery: async (input) => ({ slug: "vite", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      recordShare: async () => {
+        throw new Error("libsql down");
+      },
+    });
+
+    const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
+    expect(result.url).toBe("http://127.0.0.1:4177");
+    await handler.stop();
+  });
 });

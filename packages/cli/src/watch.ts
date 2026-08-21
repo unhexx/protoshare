@@ -25,6 +25,12 @@ export type WatchDeps = {
     uniqueName?: string;
   }) => Promise<WatchLiveResult>;
   uniqueName?: (slug: string) => string | undefined;
+  recordShare?: (input: {
+    slug: string;
+    title: string;
+    origin: string;
+    url?: string;
+  }) => Promise<{ ok: boolean; detail?: string }>;
 };
 
 export function createWatchHandler(deps: WatchDeps): {
@@ -66,6 +72,7 @@ export function createWatchHandler(deps: WatchDeps): {
         root: outDir,
         port: deps.galleryPort,
       });
+      let url = gallery.origin;
       if (deps.live !== false && deps.tryZrokShare) {
         const live = await deps.tryZrokShare({
           localOrigin: gallery.origin,
@@ -73,10 +80,20 @@ export function createWatchHandler(deps: WatchDeps): {
         });
         if (live.ok) {
           stopLive = live.stop;
-          return { url: live.url };
+          url = live.url;
         }
       }
-      return { url: gallery.origin };
+      try {
+        await deps.recordShare?.({
+          slug,
+          title,
+          origin: target.origin,
+          url,
+        });
+      } catch {
+        // каталог не должен ронять шар
+      }
+      return { url };
     },
     stop: tearDown,
   };

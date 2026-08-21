@@ -38,6 +38,9 @@ importers:
       '@protoshare/core':
         specifier: workspace:*
         version: link:../core
+      '@protoshare/live':
+        specifier: workspace:*
+        version: link:../live
       '@protoshare/share-app':
         specifier: workspace:*
         version: link:../share-app
@@ -46,6 +49,8 @@ importers:
         version: 0.1.6
 
   packages/core: {}
+
+  packages/live: {}
 
   packages/share-app:
     dependencies:

@@ -8,6 +8,7 @@ import {
   scanLocalPreviews,
   writeGallery,
 } from "@protoshare/core";
+import { tryZrokShare } from "@protoshare/live";
 import { startShareServer } from "@protoshare/share-app";
 
 const main = defineCommand({
@@ -19,6 +20,11 @@ const main = defineCommand({
     url: { type: "positional", description: "Preview origin, e.g. http://127.0.0.1:6006", required: false },
     out: { type: "string", description: "Output directory", default: ".protoshare/out" },
     open: { type: "boolean", description: "Keep the gallery server running", default: true },
+    live: {
+      type: "boolean",
+      description: "Try a public zrok URL (falls back to the local gallery)",
+      default: true,
+    },
     port: { type: "string", description: "Gallery bind port (0 = ephemeral)", default: "4177" },
   },
   async run({ args }) {
@@ -54,11 +60,24 @@ const main = defineCommand({
       port: Number.isFinite(galleryPort) ? galleryPort : 4177,
     });
     console.log(`Gallery: ${server.origin}`);
+
+    let stopLive: (() => Promise<void>) | undefined;
+    if (args.live !== false) {
+      const live = await tryZrokShare({ localOrigin: server.origin });
+      if (live.ok) {
+        console.log(`Live:    ${live.url}`);
+        stopLive = live.stop;
+      } else {
+        console.log(`Live:    пропуск (${live.detail})`);
+      }
+    }
+
     console.log("Ctrl+C чтобы остановить.");
     await new Promise<void>((resolve) => {
       process.on("SIGINT", () => resolve());
       process.on("SIGTERM", () => resolve());
     });
+    await stopLive?.();
     await server.stop();
   },
 });

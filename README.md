@@ -2,7 +2,7 @@
 
 Beautiful public URLs + snapshots for local Storybook, Vite, Next.js prototypes and design systems. Share live interactive design work without deploying.
 
-Snapshots first: a reviewer can open the gallery even if your laptop sleeps. Live tunnel (zrok) comes later.
+Snapshots first: a reviewer can open the gallery even if your laptop sleeps. If `zrok` or `zrok2` is installed and enabled, protoshare also prints a public live URL; otherwise it stays on the local gallery (`--no-live` skips the tunnel).
 
 ## Quick start
 

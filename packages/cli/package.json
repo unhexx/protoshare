@@ -8,6 +8,7 @@
   "dependencies": {
     "@protoshare/capture": "workspace:*",
     "@protoshare/core": "workspace:*",
+    "@protoshare/live": "workspace:*",
     "@protoshare/share-app": "workspace:*",
     "citty": "^0.1.6"
   }

@@ -1,0 +1,100 @@
+{
+  "question_pool": {
+    "frequency": "every_3_cycles",
+    "N": 3,
+    "processors": [
+      "product_owner",
+      "project_manager"
+    ],
+    "last_processed_cycle": 0
+  },
+  "meta_optimizer": {
+    "enabled": true,
+    "frequency": "after_every_done_cycle",
+    "min_quality": {
+      "confidence": 0.85,
+      "tests_failed": 0,
+      "process_violations": 0
+    },
+    "auto_apply_safe": true,
+    "max_proposals_per_cycle": 3,
+    "last_harvested_cycle": 0
+  },
+  "daily_decomposition_ritual": {
+    "enabled": true,
+    "frequency": "every_10_cycles",
+    "N": 10,
+    "last_ritual_cycle": 0
+  },
+  "playbooks": {
+    "enabled": true,
+    "auto_curate": true,
+    "max_bullets_per_playbook": 50,
+    "default_k": 5,
+    "min_effectiveness": 0.5,
+    "scopes": ["global", "role:*", "tool:*", "phase:*"]
+  },
+  "git": {
+    "strict_multi_repo": false,
+    "prefer_preflight_script": true
+  },
+  "context_budget": {
+    "cold_start_tokens": 16000,
+    "next_input_files_tokens": 12000
+  },
+  "state": {
+    "max_working_json_bytes": 8192,
+    "auto_compact_on_init": true
+  },
+  "profiles": {
+    "single_repo_linux": {
+      "git": {
+        "strict_multi_repo": false
+      }
+    },
+    "multi_repo_windows": {
+      "git": {
+        "strict_multi_repo": true
+      }
+    },
+    "grok_parallel": {
+      "git": {
+        "strict_multi_repo": false
+      },
+      "parallel": true
+    }
+  },
+  "supervisor": {
+    "adapter": "mock",
+    "max_cycles": 5,
+    "max_role_retries": 2,
+    "role_timeout_s": 900,
+    "pr": {
+      "base": "main",
+      "draft": false,
+      "title_prefix": "agentix:"
+    },
+    "adapters": {
+      "grok": {
+        "command": "grok"
+      },
+      "cursor": {
+        "command": null
+      },
+      "blackbox": {
+        "command": null
+      }
+    },
+    "block_process_tags": [
+      "secrets_exposure",
+      "destructive_prod"
+    ],
+    "parallel": {
+      "base": "main",
+      "integration_branch": "feature/integration-parallel",
+      "wt_base": null,
+      "require_owned_paths": true,
+      "serial": true
+    }
+  }
+}

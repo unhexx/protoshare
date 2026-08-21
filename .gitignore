@@ -1,0 +1,39 @@
+# Agentix cycle artifacts
+.agent/handoff_*.json
+.agent/last_handoff.json
+.agent/worktrees/
+.agent/history/
+.agent/LOOP_STATE.json
+agentic_loop_template/.agent/handoff_*.json
+agentic_loop_template/.agent/last_handoff.json
+.env.agentic
+.env.blackbox
+blackbox_start_prompt.txt
+
+# Environments
+.env
+.envrc
+.venv/
+venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+dist/
+.next/
+.turbo/
+.cache/
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

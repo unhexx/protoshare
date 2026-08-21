@@ -7,6 +7,7 @@ import {
   detectTarget,
   scanLocalPreviews,
   toShareSlug,
+  packGallery,
   writeGallery,
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
@@ -42,6 +43,11 @@ const main = defineCommand({
       description: "Sidecar bind port",
       default: "4178",
     },
+    pack: {
+      type: "boolean",
+      description: "Write a .tgz archive of the gallery",
+      default: false,
+    },
   },
   async run({ args }) {
     if (args.watch) {
@@ -75,6 +81,10 @@ const main = defineCommand({
 
     console.log(`Share:   ${slug}`);
     console.log(`Files:   ${outDir}`);
+    if (args.pack) {
+      const archive = await packGallery(outDir);
+      console.log(`Pack:    ${archive}`);
+    }
     if (args.open === false) {
       return;
     }

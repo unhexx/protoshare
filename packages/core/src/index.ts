@@ -18,6 +18,14 @@ export {
   DEFAULT_SHARES_URL,
   listShares,
   recordShare,
+  removeShare,
   sharesConfigFromEnv,
 } from "./shares.ts";
-export type { RecordShareInput, RecordShareResult, ShareRow, SharesConfig } from "./shares.ts";
+export type {
+  RecordShareInput,
+  RecordShareResult,
+  RemoveShareInput,
+  RemoveShareResult,
+  ShareRow,
+  SharesConfig,
+} from "./shares.ts";

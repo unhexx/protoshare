@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   listShares,
   recordShare,
+  removeShare,
   sharesConfigFromEnv,
 } from "./shares.ts";
 
@@ -96,5 +97,58 @@ describe("recordShare", () => {
     expect(rec.ok).toBe(false);
     if (rec.ok) return;
     expect(rec.detail.length).toBeGreaterThan(0);
+  });
+});
+
+describe("removeShare", () => {
+  it("удаляет шару из каталога", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-shares-"));
+    const config = { url: `file:${join(dir, "shares.db")}` };
+    await recordShare({
+      slug: "checkout",
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      config,
+    });
+    await recordShare({
+      slug: "preview",
+      title: "Vite",
+      origin: "http://127.0.0.1:5173",
+      config,
+    });
+    const removed = await removeShare({ slug: "checkout", config });
+    expect(removed).toEqual({ ok: true, slug: "checkout" });
+    const list = await listShares({ config });
+    expect(list.map((row) => row.slug)).toEqual(["preview"]);
+  });
+
+  it("нет slug — ok:false без throw", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-shares-"));
+    const config = { url: `file:${join(dir, "shares.db")}` };
+    const missing = await removeShare({ slug: "gone", config });
+    expect(missing.ok).toBe(false);
+    if (missing.ok) return;
+    expect(missing.detail.toLowerCase()).toContain("gone");
+    await expect(listShares({ config })).resolves.toEqual([]);
+  });
+
+  it("пустой slug — ok:false без открытия БД", async () => {
+    const removed = await removeShare({
+      slug: "   ",
+      config: { url: "not-a-libsql-url" },
+    });
+    expect(removed.ok).toBe(false);
+    if (removed.ok) return;
+    expect(removed.detail.toLowerCase()).toContain("slug");
+  });
+
+  it("битый url — ok:false без throw", async () => {
+    const removed = await removeShare({
+      slug: "checkout",
+      config: { url: "not-a-libsql-url" },
+    });
+    expect(removed.ok).toBe(false);
+    if (removed.ok) return;
+    expect(removed.detail.length).toBeGreaterThan(0);
   });
 });

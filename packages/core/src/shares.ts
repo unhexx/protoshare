@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createClient } from "@libsql/client";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -31,6 +31,15 @@ export type RecordShareInput = {
 
 export type RecordShareResult =
   | { ok: true; share: ShareRow }
+  | { ok: false; detail: string };
+
+export type RemoveShareInput = {
+  slug: string;
+  config?: SharesConfig;
+};
+
+export type RemoveShareResult =
+  | { ok: true; slug: string }
   | { ok: false; detail: string };
 
 const shares = sqliteTable("shares", {
@@ -122,6 +131,28 @@ export async function recordShare(input: RecordShareInput): Promise<RecordShareR
           },
         });
       return { ok: true, share };
+    } finally {
+      client.close();
+    }
+  } catch (err) {
+    return { ok: false, detail: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Удаляет шару из libsql. Нет записи / ошибка — ok:false, без throw. */
+export async function removeShare(input: RemoveShareInput): Promise<RemoveShareResult> {
+  const slug = input.slug.trim();
+  if (!slug) return { ok: false, detail: "нужен slug" };
+  const config = input.config ?? sharesConfigFromEnv();
+  try {
+    const { client, db } = await openDb(config);
+    try {
+      const existing = await db.select().from(shares).where(eq(shares.slug, slug)).limit(1);
+      if (existing.length === 0) {
+        return { ok: false, detail: `шара «${slug}» не найдена` };
+      }
+      await db.delete(shares).where(eq(shares.slug, slug));
+      return { ok: true, slug };
     } finally {
       client.close();
     }

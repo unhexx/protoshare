@@ -55,6 +55,7 @@ describe("buildCli", () => {
     expect(stdout).toMatch(/protoshare/i);
     expect(stdout).toMatch(/--out/);
     expect(stdout).toMatch(/\blist\b/);
+    expect(stdout).toMatch(/\brm\b/);
     expect(stdout).toMatch(/--no-copy|--copy/);
     expect(stdout).toMatch(/--no-browser|--browser/);
   });

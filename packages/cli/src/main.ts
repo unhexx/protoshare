@@ -20,6 +20,7 @@ import { openInBrowser } from "./browser.ts";
 import { copyToClipboard } from "./clipboard.ts";
 import { runList } from "./list.ts";
 import { pickPreview } from "./pick.ts";
+import { runRm } from "./rm.ts";
 import { createWatchHandler } from "./watch.ts";
 
 const listCommand = defineCommand({
@@ -41,6 +42,22 @@ const listCommand = defineCommand({
   },
 });
 
+const rmCommand = defineCommand({
+  meta: {
+    name: "rm",
+    description: "Remove a share from the libsql catalog",
+  },
+  args: {
+    slug: { type: "positional", description: "Share slug to remove", required: true },
+  },
+  async run({ args }) {
+    const result = await runRm({
+      slug: typeof args.slug === "string" ? args.slug : "",
+    });
+    if (!result.ok) process.exitCode = 1;
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "protoshare",
@@ -48,6 +65,7 @@ const main = defineCommand({
   },
   subCommands: {
     list: listCommand,
+    rm: rmCommand,
   },
   args: {
     url: { type: "positional", description: "Preview origin, e.g. http://127.0.0.1:6006", required: false },

@@ -2,7 +2,7 @@
 
 Beautiful public URLs + snapshots for local Storybook, Vite, Next.js prototypes and design systems. Share live interactive design work without deploying.
 
-Snapshots first: a reviewer can open the gallery even if your laptop sleeps. If `zrok` or `zrok2` is installed and enabled, protoshare also prints a public live URL; otherwise it stays on the local gallery (`--no-live` skips the tunnel).
+Snapshots first: a reviewer can open the gallery even if your laptop sleeps. If `zrok`/`zrok2` or `cloudflared` is installed, protoshare also prints a public live URL (zrok first, then cloudflared); otherwise it stays on the local gallery (`--no-live` skips the tunnel).
 
 ## Quick start
 
@@ -33,7 +33,7 @@ env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY npx pnpm@10 --filter @protoshare/c
 
 ## Overlay (Vite / Storybook)
 
-Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`. Run `protoshare --watch` so the sidecar captures snapshots and returns a gallery URL (public zrok URL when available, otherwise local). `--no-live` skips the tunnel.
+Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`. Run `protoshare --watch` so the sidecar captures snapshots and returns a gallery URL (public zrok or cloudflared URL when available, otherwise local). `--no-live` skips the tunnel.
 
 ```ts
 // vite.config.ts

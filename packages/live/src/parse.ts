@@ -1,5 +1,6 @@
 const ZROK_HOST_URL =
   /https:\/\/[a-zA-Z0-9._-]+\.(?:share|shares)\.zrok\.io\b/;
+const CLOUDFLARED_URL = /https:\/\/[a-z0-9-]+\.trycloudflare\.com\b/i;
 
 function fromEndpoints(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
@@ -34,4 +35,10 @@ export function parseZrokShareUrl(text: string): string | null {
   }
 
   return null;
+}
+
+/** Публичный URL quick tunnel из лога cloudflared. */
+export function parseCloudflaredUrl(text: string): string | null {
+  const match = text.match(CLOUDFLARED_URL);
+  return match ? match[0].toLowerCase() : null;
 }

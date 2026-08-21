@@ -9,7 +9,7 @@ import {
   toShareSlug,
   writeGallery,
 } from "@protoshare/core";
-import { toZrokUniqueName, tryZrokShare } from "@protoshare/live";
+import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
 import { startShareServer, startSidecar } from "@protoshare/share-app";
 import { createWatchHandler } from "./watch.ts";
 
@@ -24,7 +24,7 @@ const main = defineCommand({
     open: { type: "boolean", description: "Keep the gallery server running", default: true },
     live: {
       type: "boolean",
-      description: "Try a public zrok URL (falls back to the local gallery)",
+      description: "Try a public zrok/cloudflared URL (falls back to the local gallery)",
       default: true,
     },
     slug: {
@@ -88,7 +88,7 @@ const main = defineCommand({
 
     let stopLive: (() => Promise<void>) | undefined;
     if (args.live !== false) {
-      const live = await tryZrokShare({
+      const live = await tryLiveShare({
         localOrigin: server.origin,
         uniqueName: toZrokUniqueName(slug),
       });
@@ -128,7 +128,7 @@ async function runWatch(args: {
     writeGallery,
     startShareServer,
     live: args.live !== false,
-    tryZrokShare,
+    tryZrokShare: tryLiveShare,
     uniqueName: toZrokUniqueName,
   });
   const sidecar = await startSidecar({

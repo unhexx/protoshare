@@ -33,7 +33,7 @@ env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY npx pnpm@10 --filter @protoshare/c
 
 ## Overlay (Vite / Storybook)
 
-Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`. Run `protoshare --watch` so the sidecar captures snapshots and returns a gallery URL.
+Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`. Run `protoshare --watch` so the sidecar captures snapshots and returns a gallery URL (public zrok URL when available, otherwise local). `--no-live` skips the tunnel.
 
 ```ts
 // vite.config.ts

@@ -116,6 +116,7 @@ async function runWatch(args: {
   out: unknown;
   port: unknown;
   sidecarPort: unknown;
+  live: unknown;
 }) {
   const galleryPort = Number(args.port);
   const sidecarPort = Number(args.sidecarPort);
@@ -126,6 +127,9 @@ async function runWatch(args: {
     captureTarget,
     writeGallery,
     startShareServer,
+    live: args.live !== false,
+    tryZrokShare,
+    uniqueName: toZrokUniqueName,
   });
   const sidecar = await startSidecar({
     port: Number.isFinite(sidecarPort) ? sidecarPort : 4178,

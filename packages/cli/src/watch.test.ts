@@ -72,4 +72,129 @@ describe("createWatchHandler", () => {
     await handler.stop();
     expect(stops).toBe(2);
   });
+
+  it("если zrok поднялся — отдаёт публичный URL", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Checkout",
+        stories: [],
+      }),
+      captureTarget: async () => [],
+      writeGallery: async (input) => ({ slug: "checkout", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      uniqueName: (slug) => slug,
+      tryZrokShare: async (opts) => {
+        expect(opts.localOrigin).toBe("http://127.0.0.1:4177");
+        expect(opts.uniqueName).toBe("checkout");
+        return {
+          ok: true,
+          url: "https://checkout.share.zrok.io",
+          stop: async () => {},
+        };
+      },
+    });
+
+    const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
+    expect(result.url).toBe("https://checkout.share.zrok.io");
+    await handler.stop();
+  });
+
+  it("если zrok недоступен — остаётся локальная gallery", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Vite",
+        stories: [],
+      }),
+      captureTarget: async () => [],
+      writeGallery: async (input) => ({ slug: "vite", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      tryZrokShare: async () => ({ ok: false, detail: "zrok не найден в PATH" }),
+    });
+
+    const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
+    expect(result.url).toBe("http://127.0.0.1:4177");
+    await handler.stop();
+  });
+
+  it("перед новым шаром гасит предыдущий live-туннель", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    let liveStops = 0;
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "static",
+        origin,
+        title: "Preview",
+        stories: [],
+      }),
+      captureTarget: async () => [],
+      writeGallery: async (input) => ({ slug: "preview", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      tryZrokShare: async () => ({
+        ok: true as const,
+        url: "https://live.share.zrok.io",
+        stop: async () => {
+          liveStops += 1;
+        },
+      }),
+    });
+
+    await handler.onShare({ origin: "http://127.0.0.1:6006" });
+    expect(liveStops).toBe(0);
+    await handler.onShare({ origin: "http://127.0.0.1:5173" });
+    expect(liveStops).toBe(1);
+    await handler.stop();
+    expect(liveStops).toBe(2);
+  });
+
+  it("при --no-live не зовёт zrok", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    let called = 0;
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      live: false,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Vite",
+        stories: [],
+      }),
+      captureTarget: async () => [],
+      writeGallery: async (input) => ({ slug: "vite", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      tryZrokShare: async () => {
+        called += 1;
+        return { ok: true, url: "https://nope.share.zrok.io", stop: async () => {} };
+      },
+    });
+
+    const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
+    expect(called).toBe(0);
+    expect(result.url).toBe("http://127.0.0.1:4177");
+    await handler.stop();
+  });
 });

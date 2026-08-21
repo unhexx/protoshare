@@ -46,14 +46,22 @@ const listCommand = defineCommand({
 const rmCommand = defineCommand({
   meta: {
     name: "rm",
-    description: "Remove a share from the libsql catalog",
+    description: "Remove a share from the catalog and its gallery files",
   },
   args: {
     slug: { type: "positional", description: "Share slug to remove", required: true },
+    out: { type: "string", description: "Gallery output directory", default: ".protoshare/out" },
+    files: {
+      type: "boolean",
+      description: "Also delete .protoshare/out/<slug>",
+      default: true,
+    },
   },
   async run({ args }) {
     const result = await runRm({
       slug: typeof args.slug === "string" ? args.slug : "",
+      outDir: typeof args.out === "string" ? args.out : ".protoshare/out",
+      files: args.files !== false,
     });
     if (!result.ok) process.exitCode = 1;
   },

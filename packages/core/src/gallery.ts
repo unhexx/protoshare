@@ -1,5 +1,5 @@
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { access, copyFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { toShareSlug } from "./slug.ts";
 
 export type ShotInput = {
@@ -130,4 +130,41 @@ export async function writeGallery(input: WriteGalleryInput): Promise<{ slug: st
   );
 
   return { slug, outDir: input.outDir };
+}
+
+/** Каталог шары внутри outRoot. Пустой / без букв-цифр — null. */
+export function galleryDir(outRoot: string, slug: string): string | null {
+  const trimmed = slug.trim();
+  if (!trimmed || !/[a-z0-9]/i.test(trimmed)) return null;
+  const safe = toShareSlug(trimmed);
+  const root = resolve(outRoot);
+  const dir = resolve(root, safe);
+  const rel = relative(root, dir);
+  if (!rel || rel.startsWith("..") || isAbsolute(rel)) return null;
+  return dir;
+}
+
+export type RemoveGalleryResult =
+  | { ok: true; dir: string; removed: boolean }
+  | { ok: false; detail: string };
+
+/** Удаляет `.protoshare/out/<slug>`. Нет каталога — ok + removed:false. */
+export async function removeGalleryDir(opts: {
+  outRoot: string;
+  slug: string;
+}): Promise<RemoveGalleryResult> {
+  const dir = galleryDir(opts.outRoot, opts.slug);
+  if (!dir) return { ok: false, detail: "небезопасный путь" };
+  try {
+    let existed = true;
+    try {
+      await access(dir);
+    } catch {
+      existed = false;
+    }
+    if (existed) await rm(dir, { recursive: true, force: true });
+    return { ok: true, dir, removed: existed };
+  } catch (err) {
+    return { ok: false, detail: err instanceof Error ? err.message : String(err) };
+  }
 }

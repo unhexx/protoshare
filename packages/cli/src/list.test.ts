@@ -46,6 +46,28 @@ describe("runList", () => {
     expect(lines.join("\n")).toContain("checkout");
   });
 
+  it("--json печатает массив записей", async () => {
+    const lines: string[] = [];
+    const result = await runList({
+      json: true,
+      listShares: async () => [checkout],
+      log: (line) => lines.push(line),
+    });
+    expect(result.ok).toBe(true);
+    const parsed = JSON.parse(lines.join("\n")) as ShareRow[];
+    expect(parsed).toEqual([checkout]);
+  });
+
+  it("--json на пустом каталоге — []", async () => {
+    const lines: string[] = [];
+    await runList({
+      json: true,
+      listShares: async () => [],
+      log: (line) => lines.push(line),
+    });
+    expect(JSON.parse(lines.join("\n"))).toEqual([]);
+  });
+
   it("ошибка каталога — ok:false без throw", async () => {
     const errors: string[] = [];
     const result = await runList({

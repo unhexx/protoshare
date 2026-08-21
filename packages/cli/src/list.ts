@@ -12,6 +12,7 @@ export function formatShareList(rows: ShareRow[]): string {
 
 export type RunListOpts = {
   limit?: number;
+  json?: boolean;
   config?: SharesConfig;
   listShares?: (opts: { limit?: number; config?: SharesConfig }) => Promise<ShareRow[]>;
   log?: (line: string) => void;
@@ -31,7 +32,7 @@ export async function runList(opts: RunListOpts = {}): Promise<RunListResult> {
       limit: opts.limit,
       config: opts.config,
     });
-    log(formatShareList(rows));
+    log(opts.json ? JSON.stringify(rows, null, 2) : formatShareList(rows));
     return { ok: true, count: rows.length };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);

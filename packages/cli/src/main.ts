@@ -92,6 +92,11 @@ const openCommand = defineCommand({
       description: "Print a terminal QR of the gallery URL",
       default: true,
     },
+    live: {
+      type: "boolean",
+      description: "Try a public zrok/cloudflared URL (falls back to the local gallery)",
+      default: true,
+    },
   },
   async run({ args }) {
     const port = Number(args.port);
@@ -99,6 +104,7 @@ const openCommand = defineCommand({
       slug: typeof args.slug === "string" ? args.slug : "",
       outDir: typeof args.out === "string" ? args.out : ".protoshare/out",
       port: Number.isFinite(port) ? port : 4177,
+      live: args.live !== false,
     });
     if (!result.ok) {
       process.exitCode = 1;

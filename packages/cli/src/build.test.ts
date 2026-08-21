@@ -30,7 +30,11 @@ describe("npm package protoshare", () => {
     expect(pkg.license).toBe("MIT");
     expect(pkg.type).toBe("module");
     expect(pkg.bin?.protoshare).toBe("./dist/main.js");
-    expect(pkg.files).toEqual(expect.arrayContaining(["dist"]));
+    expect(pkg.files).toEqual(expect.arrayContaining(["dist", "LICENSE", "README.md"]));
+    const readme = await readFile(join(cliRoot, "README.md"), "utf8");
+    const rootReadme = await readFile(join(cliRoot, "../../README.md"), "utf8");
+    expect(readme).toBe(rootReadme);
+    expect(readme).toMatch(/live tunnel, then uploaded object, then local gallery/);
     expect(pkg.engines?.node).toMatch(/>=\s*20/);
     expect(pkg.repository?.url).toMatch(/github\.com\/unhexx\/protoshare/);
     expect(pkg.dependencies?.playwright).toBeTruthy();

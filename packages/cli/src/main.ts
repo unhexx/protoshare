@@ -16,12 +16,33 @@ import {
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
 import { startShareServer, startSidecar } from "@protoshare/share-app";
+import { runList } from "./list.ts";
 import { createWatchHandler } from "./watch.ts";
+
+const listCommand = defineCommand({
+  meta: {
+    name: "list",
+    description: "Show recorded shares from the libsql catalog",
+  },
+  args: {
+    limit: { type: "string", description: "Max rows", default: "20" },
+  },
+  async run({ args }) {
+    const limit = Number(args.limit);
+    const result = await runList({
+      limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
+    });
+    if (!result.ok) process.exitCode = 1;
+  },
+});
 
 const main = defineCommand({
   meta: {
     name: "protoshare",
     description: "Share local Storybook/Vite/Next prototypes as a snapshot gallery",
+  },
+  subCommands: {
+    list: listCommand,
   },
   args: {
     url: { type: "positional", description: "Preview origin, e.g. http://127.0.0.1:6006", required: false },

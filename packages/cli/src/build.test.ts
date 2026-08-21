@@ -54,5 +54,6 @@ describe("buildCli", () => {
     });
     expect(stdout).toMatch(/protoshare/i);
     expect(stdout).toMatch(/--out/);
+    expect(stdout).toMatch(/\blist\b/);
   });
 });

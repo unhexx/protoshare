@@ -1,8 +1,6 @@
 import { resolve } from "node:path";
 import {
   findGalleryDir,
-  readGalleryManifest,
-  recordShare,
   type FindGalleryResult,
 } from "@protoshare/core";
 import { tryLiveShare as defaultTryLiveShare, toZrokUniqueName } from "@protoshare/live";
@@ -10,7 +8,7 @@ import { startShareServer, type ShareServer } from "@protoshare/share-app";
 import { DEFAULT_OUT_DIR } from "./rm.ts";
 
 export type OpenLiveResult =
-  | { ok: true; url: string; stop: () => Promise<void> }
+  | { ok: true; provider: "zrok" | "cloudflared"; url: string; stop: () => Promise<void> }
   | { ok: false; detail?: string };
 
 export type RunOpenOpts = {
@@ -25,13 +23,6 @@ export type RunOpenOpts = {
     localOrigin: string;
     uniqueName?: string;
   }) => Promise<OpenLiveResult>;
-  readManifest?: (dir: string) => Promise<{ title: string; origin: string } | null>;
-  recordShare?: (input: {
-    slug: string;
-    title: string;
-    origin: string;
-    url?: string;
-  }) => Promise<{ ok: boolean; detail?: string; share?: { slug: string } }>;
   log?: (line: string) => void;
   error?: (line: string) => void;
 };
@@ -72,7 +63,7 @@ export async function runOpen(opts: RunOpenOpts): Promise<RunOpenResult> {
           uniqueName: (opts.uniqueName ?? toZrokUniqueName)(found.slug),
         });
         if (live.ok) {
-          log(`Live:    ${live.url}`);
+          log(`Live:    ${live.provider} ${live.url}`);
           origin = live.url;
           stopLive = live.stop;
         } else {
@@ -81,26 +72,6 @@ export async function runOpen(opts: RunOpenOpts): Promise<RunOpenResult> {
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
         log(`Live:    пропуск (${detail})`);
-      }
-    }
-    if (origin.startsWith("https://")) {
-      try {
-        const manifest =
-          (await (opts.readManifest ?? readGalleryManifest)(found.dir)) ?? {
-            title: found.slug,
-            origin,
-          };
-        const catalog = await (opts.recordShare ?? recordShare)({
-          slug: found.slug,
-          title: manifest.title,
-          origin: manifest.origin,
-          url: origin,
-        });
-        if (catalog.ok) log(`Catalog: ${catalog.share?.slug ?? found.slug}`);
-        else log(`Catalog: пропуск (${catalog.detail ?? "ошибка"})`);
-      } catch (err) {
-        const detail = err instanceof Error ? err.message : String(err);
-        log(`Catalog: пропуск (${detail})`);
       }
     }
     return {

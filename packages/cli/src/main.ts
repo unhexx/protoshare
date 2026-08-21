@@ -23,6 +23,7 @@ import { runList } from "./list.ts";
 import { runOpen } from "./open.ts";
 import { pickPreview } from "./pick.ts";
 import { runRm } from "./rm.ts";
+import { resolveShareUrl } from "./share-url.ts";
 import { createWatchHandler } from "./watch.ts";
 
 const listCommand = defineCommand({
@@ -262,16 +263,16 @@ const main = defineCommand({
         } else console.log(`Remote:  пропуск (${remote.detail})`);
       }
     }
-    const catalog = await recordShare({
-      slug,
-      title,
-      origin: target.origin,
-      url: remoteUrl || undefined,
-    });
-    if (catalog.ok) console.log(`Catalog: ${catalog.share.slug}`);
-    else console.log(`Catalog: пропуск (${catalog.detail})`);
+    const remote = remoteUrl || undefined;
     if (args.open === false) {
-      if (remoteUrl) await noteShareUrl(remoteUrl, args);
+      await noteCatalog({
+        slug,
+        title,
+        origin: target.origin,
+        url: resolveShareUrl({ remote }, "catalog"),
+      });
+      const sessionUrl = resolveShareUrl({ remote }, "session");
+      if (sessionUrl) await noteShareUrl(sessionUrl, args);
       return;
     }
 
@@ -283,21 +284,28 @@ const main = defineCommand({
     console.log(`Gallery: ${server.origin}`);
 
     let stopLive: (() => Promise<void>) | undefined;
-    let shareUrl = server.origin;
+    let liveUrl: string | undefined;
     if (args.live !== false) {
       const live = await tryLiveShare({
         localOrigin: server.origin,
         uniqueName: toZrokUniqueName(slug),
       });
       if (live.ok) {
-        console.log(`Live:    ${live.url}`);
+        console.log(`Live:    ${live.provider} ${live.url}`);
         stopLive = live.stop;
-        shareUrl = live.url;
+        liveUrl = live.url;
       } else {
         console.log(`Live:    пропуск (${live.detail})`);
       }
     }
-    await noteShareUrl(shareUrl, args);
+    const parts = { live: liveUrl, remote, gallery: server.origin };
+    await noteCatalog({
+      slug,
+      title,
+      origin: target.origin,
+      url: resolveShareUrl(parts, "catalog"),
+    });
+    await noteShareUrl(resolveShareUrl(parts, "session") ?? server.origin, args);
 
     console.log("Ctrl+C чтобы остановить.");
     await new Promise<void>((resolve) => {
@@ -310,6 +318,17 @@ const main = defineCommand({
 });
 
 await runMain(main);
+
+async function noteCatalog(input: {
+  slug: string;
+  title: string;
+  origin: string;
+  url?: string;
+}): Promise<void> {
+  const catalog = await recordShare(input);
+  if (catalog.ok) console.log(`Catalog: ${catalog.share.slug}`);
+  else console.log(`Catalog: пропуск (${catalog.detail})`);
+}
 
 async function noteShareUrl(
   url: string,

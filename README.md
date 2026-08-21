@@ -31,7 +31,7 @@ If `playwright install` dies on a SOCKS proxy, retry without it:
 env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY npx pnpm@10 --filter @protoshare/capture exec playwright install chromium
 ```
 
-## Overlay (Vite / Storybook)
+## Overlay (Vite / Storybook / Next)
 
 Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`. Run `protoshare --watch` so the sidecar captures snapshots and returns a gallery URL (public zrok or cloudflared URL when available, otherwise local). `--no-live` skips the tunnel.
 
@@ -47,6 +47,14 @@ addons: ["@protoshare/overlay/storybook"];
 ```
 
 The Storybook preset injects the preview overlay and a manager toolbar Share button (same sidecar protocol).
+
+```tsx
+// app/layout.tsx (Next.js)
+import Script from "next/script";
+import { protoshareScriptProps } from "@protoshare/overlay/next";
+<Script {...protoshareScriptProps()} />
+// or: import { ProtoshareOverlay } from "@protoshare/overlay/next";
+```
 
 ## Stack (v0.1)
 

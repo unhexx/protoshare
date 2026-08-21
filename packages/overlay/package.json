@@ -6,12 +6,15 @@
     ".": "./src/index.ts",
     "./vite": "./src/vite.ts",
     "./storybook": "./src/storybook.ts",
-    "./manager": "./src/manager-entry.ts"
+    "./manager": "./src/manager-entry.ts",
+    "./next": "./src/next-entry.ts"
   },
   "peerDependencies": {
+    "react": ">=18",
     "storybook": "^8 || ^9"
   },
   "peerDependenciesMeta": {
+    "react": { "optional": true },
     "storybook": { "optional": true }
   }
 }

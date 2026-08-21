@@ -1,13 +1,33 @@
 {
   "name": "@protoshare/overlay",
   "version": "0.1.0",
+  "description": "Share button overlay for local Storybook, Vite, and Next.js previews",
+  "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./vite": "./src/vite.ts",
-    "./storybook": "./src/storybook.ts",
-    "./manager": "./src/manager-entry.ts",
-    "./next": "./src/next-entry.ts"
+    ".": "./dist/index.js",
+    "./vite": "./dist/vite.js",
+    "./storybook": "./dist/storybook.js",
+    "./manager": "./dist/manager.js",
+    "./next": "./dist/next.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unhexx/protoshare.git",
+    "directory": "packages/overlay"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "prepack": "tsx src/build.ts"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -16,5 +36,8 @@
   "peerDependenciesMeta": {
     "react": { "optional": true },
     "storybook": { "optional": true }
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9"
   }
 }

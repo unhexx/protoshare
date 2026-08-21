@@ -8,7 +8,8 @@
     "protoshare": "./dist/main.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
@@ -18,6 +19,20 @@
     "url": "git+https://github.com/unhexx/protoshare.git",
     "directory": "packages/cli"
   },
+  "homepage": "https://github.com/unhexx/protoshare#readme",
+  "bugs": {
+    "url": "https://github.com/unhexx/protoshare/issues"
+  },
+  "keywords": [
+    "storybook",
+    "vite",
+    "nextjs",
+    "prototype",
+    "snapshot",
+    "gallery",
+    "share",
+    "design-system"
+  ],
   "scripts": {
     "build": "tsx src/build.ts",
     "prepack": "tsx src/build.ts"

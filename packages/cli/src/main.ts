@@ -1,7 +1,12 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { defineCommand, runMain } from "citty";
-import { captureTarget } from "@protoshare/capture";
+import {
+  captureTarget,
+  CHROMIUM_INSTALL_HINT,
+  isMissingChromiumError,
+  type CaptureShot,
+} from "@protoshare/capture";
 import {
   detectTarget,
   scanAllLocalPreviews,
@@ -126,7 +131,8 @@ const openCommand = defineCommand({
 const main = defineCommand({
   meta: {
     name: "protoshare",
-    description: "Share local Storybook/Vite/Next prototypes as a snapshot gallery",
+    // citty без footer — команда Chromium в description, видна в --help.
+    description: `Share local Storybook/Vite/Next prototypes as a snapshot gallery. Missing Chromium: ${CHROMIUM_INSTALL_HINT}`,
   },
   subCommands: {
     list: listCommand,
@@ -218,12 +224,22 @@ const main = defineCommand({
     const outDir = join(process.cwd(), String(args.out), slug);
     await mkdir(outDir, { recursive: true });
 
-    const shots = await captureTarget({
-      kind: target.kind,
-      origin: target.origin,
-      stories: target.stories,
-      outDir,
-    });
+    let shots: CaptureShot[];
+    try {
+      shots = await captureTarget({
+        kind: target.kind,
+        origin: target.origin,
+        stories: target.stories,
+        outDir,
+      });
+    } catch (err) {
+      if (isMissingChromiumError(err)) {
+        console.error(CHROMIUM_INSTALL_HINT);
+        process.exitCode = 1;
+        return;
+      }
+      throw err;
+    }
     await writeGallery({ outDir, title, origin: target.origin, shots, slug });
 
     console.log(`Share:   ${slug}`);

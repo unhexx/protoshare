@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { writeGallery } from "@protoshare/core";
+import { listShares, recordShare, writeGallery } from "@protoshare/core";
 import { startShareServer } from "@protoshare/share-app";
 import { runOpen } from "./open.ts";
 
@@ -103,6 +103,7 @@ describe("runOpen", () => {
         expect(opts.uniqueName).toBe("checkout");
         return {
           ok: true,
+          provider: "zrok",
           url: "https://checkout.share.zrok.io",
           stop: async () => {
             liveStops += 1;
@@ -110,75 +111,56 @@ describe("runOpen", () => {
         };
       },
       log: (line) => lines.push(line),
-      recordShare: async () => ({ ok: true, share: { slug: "checkout" } }),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.origin).toBe("https://checkout.share.zrok.io");
-    expect(lines.join("\n")).toContain("https://checkout.share.zrok.io");
+    expect(lines.join("\n")).toMatch(/Live:\s+zrok\s+https:\/\/checkout\.share\.zrok\.io/);
     await result.stop();
     expect(liveStops).toBe(1);
     expect(galleryStops).toBe(1);
   });
 
-  it("пишет live URL в каталог", async () => {
-    const recorded: { slug: string; title: string; origin: string; url?: string }[] = [];
+  it("open --live не пишет и не обновляет каталог libsql", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-open-catalog-"));
+    const config = { url: `file:${join(dir, "shares.db")}` };
+    const seeded = await recordShare({
+      slug: "checkout",
+      title: "Old",
+      origin: "http://127.0.0.1:6006",
+      url: "https://cdn.example/checkout.tgz",
+      createdAt: new Date("2026-08-21T10:00:00.000Z"),
+      config,
+    });
+    expect(seeded.ok).toBe(true);
+    const before = await listShares({ config });
+    const prev = process.env.PROTOSHARE_LIBSQL_URL;
+    process.env.PROTOSHARE_LIBSQL_URL = config.url;
     const lines: string[] = [];
-    const result = await runOpen({
-      slug: "checkout",
-      findGalleryDir: async () => ({ ok: true, dir: "/tmp/out/checkout", slug: "checkout" }),
-      startShareServer: async () => ({
-        origin: "http://127.0.0.1:4177",
-        stop: async () => {},
-      }),
-      tryLiveShare: async () => ({
-        ok: true,
-        url: "https://checkout.share.zrok.io",
-        stop: async () => {},
-      }),
-      readManifest: async (dir) => {
-        expect(dir).toBe("/tmp/out/checkout");
-        return { title: "Checkout", origin: "http://127.0.0.1:6006" };
-      },
-      recordShare: async (input) => {
-        recorded.push(input);
-        return { ok: true, share: { slug: input.slug } };
-      },
-      log: (line) => lines.push(line),
-    });
-    expect(result.ok).toBe(true);
-    expect(recorded).toEqual([
-      {
+    try {
+      const result = await runOpen({
         slug: "checkout",
-        title: "Checkout",
-        origin: "http://127.0.0.1:6006",
-        url: "https://checkout.share.zrok.io",
-      },
-    ]);
-    expect(lines.join("\n")).toMatch(/catalog/i);
-  });
-
-  it("ошибка каталога не роняет open", async () => {
-    const result = await runOpen({
-      slug: "checkout",
-      findGalleryDir: async () => ({ ok: true, dir: "/tmp/out/checkout", slug: "checkout" }),
-      startShareServer: async () => ({
-        origin: "http://127.0.0.1:4177",
-        stop: async () => {},
-      }),
-      tryLiveShare: async () => ({
-        ok: true,
-        url: "https://checkout.share.zrok.io",
-        stop: async () => {},
-      }),
-      recordShare: async () => {
-        throw new Error("libsql down");
-      },
-      log: () => {},
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.origin).toBe("https://checkout.share.zrok.io");
+        findGalleryDir: async () => ({ ok: true, dir: "/tmp/out/checkout", slug: "checkout" }),
+        startShareServer: async () => ({
+          origin: "http://127.0.0.1:4177",
+          stop: async () => {},
+        }),
+        tryLiveShare: async () => ({
+          ok: true,
+          provider: "zrok",
+          url: "https://checkout.share.zrok.io",
+          stop: async () => {},
+        }),
+        log: (line) => lines.push(line),
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) await result.stop();
+    } finally {
+      if (prev === undefined) delete process.env.PROTOSHARE_LIBSQL_URL;
+      else process.env.PROTOSHARE_LIBSQL_URL = prev;
+    }
+    await expect(listShares({ config })).resolves.toEqual(before);
+    expect(lines.join("\n")).not.toMatch(/catalog/i);
   });
 
   it("если zrok недоступен — остаётся локальная gallery", async () => {
@@ -190,10 +172,11 @@ describe("runOpen", () => {
         origin: "http://127.0.0.1:4177",
         stop: async () => {},
       }),
-      tryLiveShare: async () => ({ ok: false, detail: "zrok не найден в PATH" }),
-      recordShare: async () => {
-        throw new Error("should not record");
-      },
+      tryLiveShare: async () => ({
+        ok: false,
+        reason: "missing-binary",
+        detail: "zrok не найден в PATH",
+      }),
       log: (line) => lines.push(line),
     });
     expect(result.ok).toBe(true);
@@ -214,7 +197,12 @@ describe("runOpen", () => {
       }),
       tryLiveShare: async () => {
         called += 1;
-        return { ok: true, url: "https://nope.share.zrok.io", stop: async () => {} };
+        return {
+          ok: true,
+          provider: "zrok",
+          url: "https://nope.share.zrok.io",
+          stop: async () => {},
+        };
       },
       log: () => {},
     });

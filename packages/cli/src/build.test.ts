@@ -61,4 +61,20 @@ describe("buildCli", () => {
     expect(stdout).toMatch(/--no-browser|--browser/);
     expect(stdout).toMatch(/--no-qr|--qr/);
   });
+
+  it("open не пишет в каталог", async () => {
+    const openSrc = await readFile(join(cliRoot, "src/open.ts"), "utf8");
+    expect(openSrc).not.toMatch(/\brecordShare\b/);
+    expect(openSrc).not.toMatch(/\bpersistShare\b/);
+    expect(openSrc).not.toMatch(/\bnoteCatalog\b/);
+    const mainSrc = await readFile(join(cliRoot, "src/main.ts"), "utf8");
+    const start = mainSrc.indexOf("const openCommand");
+    const end = mainSrc.indexOf("const main =");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const openCommand = mainSrc.slice(start, end);
+    expect(openCommand).not.toMatch(/\brecordShare\b/);
+    expect(openCommand).not.toMatch(/\bpersistShare\b/);
+    expect(openCommand).not.toMatch(/\bnoteCatalog\b/);
+  });
 });

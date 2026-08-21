@@ -16,6 +16,7 @@ import {
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
 import { startShareServer, startSidecar } from "@protoshare/share-app";
+import { openInBrowser } from "./browser.ts";
 import { copyToClipboard } from "./clipboard.ts";
 import { runList } from "./list.ts";
 import { pickPreview } from "./pick.ts";
@@ -88,6 +89,11 @@ const main = defineCommand({
     copy: {
       type: "boolean",
       description: "Copy the gallery/live URL to the clipboard",
+      default: true,
+    },
+    browser: {
+      type: "boolean",
+      description: "Open the share URL in the default browser",
       default: true,
     },
   },
@@ -177,7 +183,7 @@ const main = defineCommand({
     if (catalog.ok) console.log(`Catalog: ${catalog.share.slug}`);
     else console.log(`Catalog: пропуск (${catalog.detail})`);
     if (args.open === false) {
-      if (args.copy !== false && remoteUrl) await noteClipboard(remoteUrl);
+      if (remoteUrl) await noteShareUrl(remoteUrl, args);
       return;
     }
 
@@ -203,7 +209,7 @@ const main = defineCommand({
         console.log(`Live:    пропуск (${live.detail})`);
       }
     }
-    if (args.copy !== false) await noteClipboard(shareUrl);
+    await noteShareUrl(shareUrl, args);
 
     console.log("Ctrl+C чтобы остановить.");
     await new Promise<void>((resolve) => {
@@ -217,10 +223,20 @@ const main = defineCommand({
 
 await runMain(main);
 
-async function noteClipboard(url: string): Promise<void> {
-  const copied = await copyToClipboard(url);
-  if (copied.ok) console.log("Clipboard: URL");
-  else console.log(`Clipboard: пропуск (${copied.detail})`);
+async function noteShareUrl(
+  url: string,
+  args: { copy?: unknown; browser?: unknown },
+): Promise<void> {
+  if (args.copy !== false) {
+    const copied = await copyToClipboard(url);
+    if (copied.ok) console.log("Clipboard: URL");
+    else console.log(`Clipboard: пропуск (${copied.detail})`);
+  }
+  if (args.browser !== false) {
+    const opened = await openInBrowser(url);
+    if (opened.ok) console.log("Browser:  URL");
+    else console.log(`Browser:  пропуск (${opened.detail})`);
+  }
 }
 
 async function runWatch(args: {

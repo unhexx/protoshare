@@ -1,6 +1,11 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import type { CaptureInput, CaptureShot } from "@protoshare/capture";
+import {
+  CHROMIUM_INSTALL_HINT,
+  isMissingChromiumError,
+  type CaptureInput,
+  type CaptureShot,
+} from "@protoshare/capture";
 import {
   toShareSlug,
   type DetectedTarget,
@@ -31,6 +36,7 @@ export type WatchDeps = {
     origin: string;
     url?: string;
   }) => Promise<{ ok: boolean; detail?: string }>;
+  error?: (line: string) => void;
 };
 
 export function createWatchHandler(deps: WatchDeps): {
@@ -54,12 +60,20 @@ export function createWatchHandler(deps: WatchDeps): {
       const slug = toShareSlug(title);
       const outDir = join(deps.outDir, slug);
       await mkdir(outDir, { recursive: true });
-      const shots = await deps.captureTarget({
-        kind: target.kind,
-        origin: target.origin,
-        stories: target.stories,
-        outDir,
-      });
+      let shots: CaptureShot[];
+      try {
+        shots = await deps.captureTarget({
+          kind: target.kind,
+          origin: target.origin,
+          stories: target.stories,
+          outDir,
+        });
+      } catch (err) {
+        if (isMissingChromiumError(err)) {
+          (deps.error ?? console.error)(CHROMIUM_INSTALL_HINT);
+        }
+        throw err;
+      }
       await deps.writeGallery({
         outDir,
         title,

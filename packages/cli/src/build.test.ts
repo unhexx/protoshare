@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { CHROMIUM_INSTALL_HINT } from "@protoshare/capture";
 import { buildCli } from "./build.ts";
 
 const execFileAsync = promisify(execFile);
@@ -36,6 +37,8 @@ describe("npm package protoshare", () => {
     expect(pkg.dependencies?.["@protoshare/core"]).toBeUndefined();
     expect(pkg.dependencies?.["@protoshare/capture"]).toBeUndefined();
     expect(pkg.dependencies?.citty).toBeUndefined();
+    // npx --package=protoshare тянет playwright из опубликованного CLI, не из @protoshare/capture.
+    expect(CHROMIUM_INSTALL_HINT).toBe(`npx --package=${pkg.name} playwright install chromium`);
   });
 });
 
@@ -60,6 +63,7 @@ describe("buildCli", () => {
     expect(stdout).toMatch(/--no-copy|--copy/);
     expect(stdout).toMatch(/--no-browser|--browser/);
     expect(stdout).toMatch(/--no-qr|--qr/);
+    expect(stdout).toContain(CHROMIUM_INSTALL_HINT);
   });
 
   it("open не пишет в каталог", async () => {

@@ -2,6 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { CHROMIUM_INSTALL_HINT, MissingChromiumError } from "@protoshare/capture";
 import { createWatchHandler } from "./watch.ts";
 
 describe("createWatchHandler", () => {
@@ -264,6 +265,35 @@ describe("createWatchHandler", () => {
 
     const result = await handler.onShare({ origin: "http://127.0.0.1:5173" });
     expect(result.url).toBe("http://127.0.0.1:4177");
+    await handler.stop();
+  });
+
+  it("печатает hint Chromium при missing browser и оставляет sidecar", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-watch-"));
+    const lines: string[] = [];
+    const missing = new MissingChromiumError();
+    const handler = createWatchHandler({
+      outDir,
+      galleryPort: 0,
+      detectTarget: async (origin) => ({
+        kind: "vite",
+        origin,
+        title: "Vite",
+        stories: [],
+      }),
+      captureTarget: async () => {
+        throw missing;
+      },
+      writeGallery: async (input) => ({ slug: "vite", outDir: input.outDir }),
+      startShareServer: async () => ({
+        origin: "http://127.0.0.1:4177",
+        stop: async () => {},
+      }),
+      error: (line) => lines.push(line),
+    });
+
+    await expect(handler.onShare({ origin: "http://127.0.0.1:5173" })).rejects.toBe(missing);
+    expect(lines).toEqual([CHROMIUM_INSTALL_HINT]);
     await handler.stop();
   });
 });

@@ -16,6 +16,7 @@ npx pnpm@10 protoshare
 npx pnpm@10 protoshare http://127.0.0.1:6006
 npx pnpm@10 protoshare http://127.0.0.1:5173 --no-open
 npx pnpm@10 protoshare http://127.0.0.1:6006 --slug checkout
+npx pnpm@10 protoshare --watch
 ```
 
 Writes `.protoshare/out/<slug>/index.html` + `shots/*.png` and serves a local gallery. With zrok enabled, `--slug` also tries a vanity host (`https://<slug>.share.zrok.io`); if the name is taken, the share falls back to a random live URL.
@@ -32,7 +33,7 @@ env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY npx pnpm@10 --filter @protoshare/c
 
 ## Overlay (Vite / Storybook)
 
-Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`.
+Inject a Share button into the local preview. It POSTs to a sidecar (`http://127.0.0.1:4178/v1/share`); if nothing is listening, the button copies `npx protoshare <origin>`. Run `protoshare --watch` so the sidecar captures snapshots and returns a gallery URL.
 
 ```ts
 // vite.config.ts

@@ -10,7 +10,8 @@ import {
   writeGallery,
 } from "@protoshare/core";
 import { toZrokUniqueName, tryZrokShare } from "@protoshare/live";
-import { startShareServer } from "@protoshare/share-app";
+import { startShareServer, startSidecar } from "@protoshare/share-app";
+import { createWatchHandler } from "./watch.ts";
 
 const main = defineCommand({
   meta: {
@@ -31,8 +32,23 @@ const main = defineCommand({
       description: "Vanity share name (default: from the preview title)",
     },
     port: { type: "string", description: "Gallery bind port (0 = ephemeral)", default: "4177" },
+    watch: {
+      type: "boolean",
+      description: "Overlay sidecar: POST /v1/share on :4178",
+      default: false,
+    },
+    sidecarPort: {
+      type: "string",
+      description: "Sidecar bind port",
+      default: "4178",
+    },
   },
   async run({ args }) {
+    if (args.watch) {
+      await runWatch(args);
+      return;
+    }
+
     const origin = typeof args.url === "string" && args.url.length > 0 ? args.url : null;
     const target = origin ? await detectTarget(origin) : await scanLocalPreviews();
     if (!target) {
@@ -95,3 +111,33 @@ const main = defineCommand({
 });
 
 await runMain(main);
+
+async function runWatch(args: {
+  out: unknown;
+  port: unknown;
+  sidecarPort: unknown;
+}) {
+  const galleryPort = Number(args.port);
+  const sidecarPort = Number(args.sidecarPort);
+  const handler = createWatchHandler({
+    outDir: join(process.cwd(), String(args.out)),
+    galleryPort: Number.isFinite(galleryPort) ? galleryPort : 4177,
+    detectTarget,
+    captureTarget,
+    writeGallery,
+    startShareServer,
+  });
+  const sidecar = await startSidecar({
+    port: Number.isFinite(sidecarPort) ? sidecarPort : 4178,
+    onShare: handler.onShare,
+  });
+  console.log(`Watch:   ${sidecar.origin}`);
+  console.log(`Share:   POST ${sidecar.origin}/v1/share`);
+  console.log("Ctrl+C чтобы остановить.");
+  await new Promise<void>((resolve) => {
+    process.on("SIGINT", () => resolve());
+    process.on("SIGTERM", () => resolve());
+  });
+  await handler.stop();
+  await sidecar.stop();
+}

@@ -46,9 +46,13 @@ export async function startShareServer(opts: {
     }
   });
 
-  const listening = await new Promise<ShareServer>((resolve, reject) => {
+  return listenHono(app, opts.port);
+}
+
+export async function listenHono(app: Hono, port: number): Promise<ShareServer> {
+  return new Promise<ShareServer>((resolve, reject) => {
     const server = serve(
-      { fetch: app.fetch, port: opts.port, hostname: "127.0.0.1" },
+      { fetch: app.fetch, port, hostname: "127.0.0.1" },
       (info) => {
         resolve({
           origin: `http://127.0.0.1:${info.port}`,
@@ -61,6 +65,4 @@ export async function startShareServer(opts: {
     );
     server.once("error", reject);
   });
-
-  return listening;
 }

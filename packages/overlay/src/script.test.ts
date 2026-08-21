@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { overlayClientSource } from "./script.ts";
+import { storyIdFromLocation } from "./share.ts";
 
 describe("overlayClientSource", () => {
   it("рисует кнопку Share и бьёт в /v1/share", () => {
@@ -25,5 +26,6 @@ describe("overlayClientSource", () => {
     expect(src).toContain('typeof data.captured === "number"');
     expect(src).toContain("storyId");
     expect(src).not.toContain("Captured undefined");
+    expect(src).toContain(storyIdFromLocation.toString());
   });
 });

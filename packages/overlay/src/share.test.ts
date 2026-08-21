@@ -113,6 +113,10 @@ describe("storyIdFromLocation", () => {
     expect(storyIdFromLocation("?path=/story/example-button--primary")).toBe(
       "example-button--primary",
     );
+    expect(storyIdFromLocation("?path=/example-button--primary")).toBe(
+      "example-button--primary",
+    );
+    expect(storyIdFromLocation("?id=  button--primary  ")).toBe("button--primary");
     expect(storyIdFromLocation("")).toBeUndefined();
   });
 });

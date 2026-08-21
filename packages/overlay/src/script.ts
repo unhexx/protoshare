@@ -1,4 +1,9 @@
-import { DEFAULT_SIDECAR, DEFAULT_SHARE_TIMEOUT_MS, shareEndpoint } from "./share.ts";
+import {
+  DEFAULT_SIDECAR,
+  DEFAULT_SHARE_TIMEOUT_MS,
+  shareEndpoint,
+  storyIdFromLocation,
+} from "./share.ts";
 
 export type OverlayClientOpts = {
   sidecarOrigin?: string;
@@ -34,17 +39,7 @@ export function overlayClientSource(opts: OverlayClientOpts = {}): string {
     const origin = location.origin;
     const command = "npx protoshare " + origin;
     show("Capturing…");
-    const params = new URLSearchParams(location.search);
-    let storyId = params.get("id") || undefined;
-    if (!storyId) {
-      const path = params.get("path");
-      if (path) {
-        const marker = "/story/";
-        const idx = path.indexOf(marker);
-        const raw = idx >= 0 ? path.slice(idx + marker.length) : path;
-        storyId = raw.split("/").join("-") || undefined;
-      }
-    }
+    const storyId = (${storyIdFromLocation.toString()})(location.search);
     try {
       const ac = new AbortController();
       const timer = setTimeout(function () { ac.abort(); }, timeoutMs);

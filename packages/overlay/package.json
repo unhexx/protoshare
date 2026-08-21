@@ -27,7 +27,9 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md"
   ],
   "engines": {
     "node": ">=20"
@@ -37,6 +39,19 @@
     "url": "git+https://github.com/unhexx/protoshare.git",
     "directory": "packages/overlay"
   },
+  "homepage": "https://github.com/unhexx/protoshare#readme",
+  "bugs": {
+    "url": "https://github.com/unhexx/protoshare/issues"
+  },
+  "keywords": [
+    "storybook",
+    "vite",
+    "nextjs",
+    "overlay",
+    "addon",
+    "share",
+    "prototype"
+  ],
   "publishConfig": {
     "access": "public"
   },

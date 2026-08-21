@@ -28,7 +28,10 @@ describe("npm package @protoshare/overlay", () => {
     expect(pkg.description?.length ?? 0).toBeGreaterThan(10);
     expect(pkg.license).toBe("MIT");
     expect(pkg.type).toBe("module");
-    expect(pkg.files).toEqual(expect.arrayContaining(["dist"]));
+    expect(pkg.files).toEqual(expect.arrayContaining(["dist", "LICENSE", "README.md"]));
+    const readme = await readFile(join(overlayRoot, "README.md"), "utf8");
+    expect(readme).toMatch(/@protoshare\/overlay/);
+    expect(readme).toMatch(/protoshareOverlay/);
     expect(pkg.engines?.node).toMatch(/>=\s*20/);
     expect(pkg.repository?.url).toMatch(/github\.com\/unhexx\/protoshare/);
     expect(pkg.publishConfig?.access).toBe("public");

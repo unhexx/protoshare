@@ -55,3 +55,7 @@ Success: a reviewer opens the local (or later public) URL and sees component sna
 - Optional: `npx pxpipe-proxy` with `PXPIPE_MODELS` including grok-4.6 (lossy on hex — keep IDs as text)
 - Optional: Headroom wrap for tool-output compression
 - pxpipe is **dev-only**, not a product dependency
+
+## Drift (v0.1 on disk)
+
+Live adapters and overlay shipped before the first npm publish. Gallery remains generated HTML. Two published packages only (`protoshare`, `@protoshare/overlay`); `@protoshare/core|capture|live|share-app` are `"private": true`. MIT LICENSE at repo root and in the published package dirs. Keep a Changelog first version heading is `## [0.1.0] - 2026-08-21`. Consumer Chromium: `npx --package=protoshare playwright install chromium`. Do not treat this 2026-08-21 stack note as the CLI SSOT — see `packages/*`.

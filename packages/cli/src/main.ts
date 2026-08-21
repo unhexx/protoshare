@@ -16,6 +16,7 @@ import {
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
 import { startShareServer, startSidecar } from "@protoshare/share-app";
+import { copyToClipboard } from "./clipboard.ts";
 import { runList } from "./list.ts";
 import { pickPreview } from "./pick.ts";
 import { createWatchHandler } from "./watch.ts";
@@ -83,6 +84,11 @@ const main = defineCommand({
     publicUrl: {
       type: "string",
       description: "Public URL to print after upload",
+    },
+    copy: {
+      type: "boolean",
+      description: "Copy the gallery/live URL to the clipboard",
+      default: true,
     },
   },
   async run({ args }) {
@@ -171,6 +177,7 @@ const main = defineCommand({
     if (catalog.ok) console.log(`Catalog: ${catalog.share.slug}`);
     else console.log(`Catalog: пропуск (${catalog.detail})`);
     if (args.open === false) {
+      if (args.copy !== false && remoteUrl) await noteClipboard(remoteUrl);
       return;
     }
 
@@ -182,6 +189,7 @@ const main = defineCommand({
     console.log(`Gallery: ${server.origin}`);
 
     let stopLive: (() => Promise<void>) | undefined;
+    let shareUrl = server.origin;
     if (args.live !== false) {
       const live = await tryLiveShare({
         localOrigin: server.origin,
@@ -190,10 +198,12 @@ const main = defineCommand({
       if (live.ok) {
         console.log(`Live:    ${live.url}`);
         stopLive = live.stop;
+        shareUrl = live.url;
       } else {
         console.log(`Live:    пропуск (${live.detail})`);
       }
     }
+    if (args.copy !== false) await noteClipboard(shareUrl);
 
     console.log("Ctrl+C чтобы остановить.");
     await new Promise<void>((resolve) => {
@@ -206,6 +216,12 @@ const main = defineCommand({
 });
 
 await runMain(main);
+
+async function noteClipboard(url: string): Promise<void> {
+  const copied = await copyToClipboard(url);
+  if (copied.ok) console.log("Clipboard: URL");
+  else console.log(`Clipboard: пропуск (${copied.detail})`);
+}
 
 async function runWatch(args: {
   out: unknown;

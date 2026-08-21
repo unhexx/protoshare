@@ -4,3 +4,4 @@ packages:
 autoInstallPeers: false
 onlyBuiltDependencies:
   - esbuild
+  - libsql

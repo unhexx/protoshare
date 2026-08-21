@@ -14,3 +14,10 @@ export {
   uploadArchiveS3,
 } from "./s3.ts";
 export type { S3EnvConfig } from "./s3.ts";
+export {
+  DEFAULT_SHARES_URL,
+  listShares,
+  recordShare,
+  sharesConfigFromEnv,
+} from "./shares.ts";
+export type { RecordShareInput, RecordShareResult, ShareRow, SharesConfig } from "./shares.ts";

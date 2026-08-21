@@ -20,7 +20,7 @@ npx pnpm@10 protoshare http://127.0.0.1:6006 --slug checkout
 npx pnpm@10 protoshare --watch
 ```
 
-Writes `.protoshare/out/<slug>/index.html` + `shots/*.png` and serves a local gallery. `--pack` also writes `gallery.tgz` (frozen share you can send without a live tunnel). `--upload-url` PUTs that archive to a presigned S3/R2 URL (`PROTOSHARE_UPLOAD_URL`); or set `PROTOSHARE_S3_ENDPOINT` + `PROTOSHARE_S3_BUCKET` + `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for SigV4 PUT. `--public-url` / `PROTOSHARE_PUBLIC_URL` is what we print. With zrok enabled, `--slug` also tries a vanity host (`https://<slug>.share.zrok.io`); if the name is taken, the share falls back to a random live URL.
+Writes `.protoshare/out/<slug>/index.html` + `shots/*.png` and serves a local gallery. `--pack` also writes `gallery.tgz` (frozen share you can send without a live tunnel). `--upload-url` PUTs that archive to a presigned S3/R2 URL (`PROTOSHARE_UPLOAD_URL`); or set `PROTOSHARE_S3_ENDPOINT` + `PROTOSHARE_S3_BUCKET` + `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for SigV4 PUT. `--public-url` / `PROTOSHARE_PUBLIC_URL` is what we print. Each share is also recorded in libsql (`PROTOSHARE_LIBSQL_URL` / `TURSO_DATABASE_URL`, default `file:.protoshare/shares.db`). With zrok enabled, `--slug` also tries a vanity host (`https://<slug>.share.zrok.io`); if the name is taken, the share falls back to a random live URL.
 
 ```bash
 npx pnpm@10 test

@@ -4,5 +4,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "drizzle-orm": "^0.44.5"
   }
 }

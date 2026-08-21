@@ -7,6 +7,7 @@ import {
   scanLocalPreviews,
   toShareSlug,
   packGallery,
+  recordShare,
   s3ConfigFromEnv,
   s3ObjectKey,
   uploadArchive,
@@ -97,9 +98,10 @@ const main = defineCommand({
       process.env.PROTOSHARE_UPLOAD_URL ||
       "";
     const s3 = s3ConfigFromEnv();
-    const publicUrl =
+    let remoteUrl =
       (typeof args.publicUrl === "string" && args.publicUrl.trim()) ||
-      process.env.PROTOSHARE_PUBLIC_URL;
+      process.env.PROTOSHARE_PUBLIC_URL ||
+      "";
     if (args.pack || uploadUrl || s3) {
       const archive = await packGallery(outDir);
       console.log(`Pack:    ${archive}`);
@@ -107,21 +109,33 @@ const main = defineCommand({
         const remote = await uploadArchive({
           file: archive,
           putUrl: uploadUrl,
-          publicUrl,
+          publicUrl: remoteUrl,
         });
-        if (remote.ok) console.log(`Remote:  ${remote.url}`);
-        else console.log(`Remote:  пропуск (${remote.detail})`);
+        if (remote.ok) {
+          console.log(`Remote:  ${remote.url}`);
+          remoteUrl = remote.url;
+        } else console.log(`Remote:  пропуск (${remote.detail})`);
       } else if (s3) {
         const remote = await uploadArchiveS3({
           file: archive,
           config: s3,
           key: s3ObjectKey(s3.prefix, slug),
-          publicUrl,
+          publicUrl: remoteUrl,
         });
-        if (remote.ok) console.log(`Remote:  ${remote.url}`);
-        else console.log(`Remote:  пропуск (${remote.detail})`);
+        if (remote.ok) {
+          console.log(`Remote:  ${remote.url}`);
+          remoteUrl = remote.url;
+        } else console.log(`Remote:  пропуск (${remote.detail})`);
       }
     }
+    const catalog = await recordShare({
+      slug,
+      title,
+      origin: target.origin,
+      url: remoteUrl || undefined,
+    });
+    if (catalog.ok) console.log(`Catalog: ${catalog.share.slug}`);
+    else console.log(`Catalog: пропуск (${catalog.detail})`);
     if (args.open === false) {
       return;
     }

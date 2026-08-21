@@ -23,6 +23,7 @@
     "prepack": "tsx src/build.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "playwright": "^1.55.0"
   },
   "devDependencies": {

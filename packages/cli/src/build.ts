@@ -22,7 +22,7 @@ export async function buildCli(opts: BuildCliOpts = {}): Promise<string> {
     target: "node20",
     outfile,
     banner: { js: "#!/usr/bin/env node" },
-    external: ["playwright"],
+    external: ["playwright", "@libsql/client"],
     logLevel: "silent",
   });
   await chmod(outfile, 0o755);

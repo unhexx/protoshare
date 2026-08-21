@@ -148,6 +148,25 @@ export type RemoveGalleryResult =
   | { ok: true; dir: string; removed: boolean }
   | { ok: false; detail: string };
 
+export type FindGalleryResult =
+  | { ok: true; dir: string; slug: string }
+  | { ok: false; detail: string };
+
+/** Находит `.protoshare/out/<slug>/index.html`. Нет файлов / путь — ok:false. */
+export async function findGalleryDir(opts: {
+  outRoot: string;
+  slug: string;
+}): Promise<FindGalleryResult> {
+  const dir = galleryDir(opts.outRoot, opts.slug);
+  if (!dir) return { ok: false, detail: "небезопасный путь" };
+  try {
+    await access(join(dir, "index.html"));
+    return { ok: true, dir, slug: toShareSlug(opts.slug.trim()) };
+  } catch {
+    return { ok: false, detail: `нет gallery в ${dir}` };
+  }
+}
+
 /** Удаляет `.protoshare/out/<slug>`. Нет каталога — ok + removed:false. */
 export async function removeGalleryDir(opts: {
   outRoot: string;

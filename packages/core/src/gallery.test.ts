@@ -2,7 +2,7 @@ import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { galleryDir, removeGalleryDir, writeGallery } from "./gallery.ts";
+import { findGalleryDir, galleryDir, removeGalleryDir, writeGallery } from "./gallery.ts";
 
 describe("writeGallery", () => {
   it("кладёт index.html и манифест со снимками", async () => {
@@ -95,5 +95,37 @@ describe("removeGalleryDir", () => {
     const result = await removeGalleryDir({ outRoot: root, slug: ".." });
     expect(result.ok).toBe(false);
     await expect(readFile(marker, "utf8")).resolves.toBe("stay");
+  });
+});
+
+describe("findGalleryDir", () => {
+  it("находит index.html шары", async () => {
+    const root = await mkdtemp(join(tmpdir(), "protoshare-open-"));
+    const outDir = join(root, "checkout");
+    await writeGallery({
+      outDir,
+      title: "Checkout",
+      origin: "http://127.0.0.1:6006",
+      slug: "checkout",
+      shots: [],
+    });
+    await expect(findGalleryDir({ outRoot: root, slug: "Checkout" })).resolves.toEqual({
+      ok: true,
+      dir: outDir,
+      slug: "checkout",
+    });
+  });
+
+  it("нет index.html — ok:false", async () => {
+    const root = await mkdtemp(join(tmpdir(), "protoshare-open-"));
+    const result = await findGalleryDir({ outRoot: root, slug: "gone" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.detail.toLowerCase()).toMatch(/нет|gallery/);
+  });
+
+  it("небезопасный slug — ok:false", async () => {
+    const result = await findGalleryDir({ outRoot: "/tmp/out", slug: ".." });
+    expect(result.ok).toBe(false);
   });
 });

@@ -20,6 +20,7 @@ import { openInBrowser } from "./browser.ts";
 import { copyToClipboard } from "./clipboard.ts";
 import { renderShareQr } from "./qr.ts";
 import { runList } from "./list.ts";
+import { runOpen } from "./open.ts";
 import { pickPreview } from "./pick.ts";
 import { runRm } from "./rm.ts";
 import { createWatchHandler } from "./watch.ts";
@@ -67,6 +68,52 @@ const rmCommand = defineCommand({
   },
 });
 
+const openCommand = defineCommand({
+  meta: {
+    name: "open",
+    description: "Serve a saved snapshot gallery by slug",
+  },
+  args: {
+    slug: { type: "positional", description: "Share slug to open", required: true },
+    out: { type: "string", description: "Gallery output directory", default: ".protoshare/out" },
+    port: { type: "string", description: "Gallery bind port (0 = ephemeral)", default: "4177" },
+    copy: {
+      type: "boolean",
+      description: "Copy the gallery URL to the clipboard",
+      default: true,
+    },
+    browser: {
+      type: "boolean",
+      description: "Open the gallery URL in the default browser",
+      default: true,
+    },
+    qr: {
+      type: "boolean",
+      description: "Print a terminal QR of the gallery URL",
+      default: true,
+    },
+  },
+  async run({ args }) {
+    const port = Number(args.port);
+    const result = await runOpen({
+      slug: typeof args.slug === "string" ? args.slug : "",
+      outDir: typeof args.out === "string" ? args.out : ".protoshare/out",
+      port: Number.isFinite(port) ? port : 4177,
+    });
+    if (!result.ok) {
+      process.exitCode = 1;
+      return;
+    }
+    await noteShareUrl(result.origin, args);
+    console.log("Ctrl+C чтобы остановить.");
+    await new Promise<void>((resolve) => {
+      process.on("SIGINT", () => resolve());
+      process.on("SIGTERM", () => resolve());
+    });
+    await result.stop();
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "protoshare",
@@ -75,6 +122,7 @@ const main = defineCommand({
   subCommands: {
     list: listCommand,
     rm: rmCommand,
+    open: openCommand,
   },
   args: {
     url: { type: "positional", description: "Preview origin, e.g. http://127.0.0.1:6006", required: false },

@@ -1,8 +1,13 @@
 export { toShareSlug } from "./slug.ts";
 export { detectTarget, scanAllLocalPreviews, scanLocalPreviews } from "./detect.ts";
 export type { DetectedTarget, PreviewKind, StoryRef } from "./detect.ts";
-export { galleryDir, removeGalleryDir, writeGallery } from "./gallery.ts";
-export type { RemoveGalleryResult, ShotInput, WriteGalleryInput } from "./gallery.ts";
+export { findGalleryDir, galleryDir, removeGalleryDir, writeGallery } from "./gallery.ts";
+export type {
+  FindGalleryResult,
+  RemoveGalleryResult,
+  ShotInput,
+  WriteGalleryInput,
+} from "./gallery.ts";
 export { packGallery } from "./pack.ts";
 export { publicObjectUrl, uploadArchive } from "./upload.ts";
 export type { UploadFail, UploadOk, UploadResult } from "./upload.ts";

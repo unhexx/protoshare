@@ -8,6 +8,7 @@ import {
   scanLocalPreviews,
   toShareSlug,
   packGallery,
+  uploadArchive,
   writeGallery,
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
@@ -48,6 +49,14 @@ const main = defineCommand({
       description: "Write a .tgz archive of the gallery",
       default: false,
     },
+    uploadUrl: {
+      type: "string",
+      description: "PUT gallery.tgz to a presigned S3/R2 URL",
+    },
+    publicUrl: {
+      type: "string",
+      description: "Public URL to print after upload",
+    },
   },
   async run({ args }) {
     if (args.watch) {
@@ -81,9 +90,24 @@ const main = defineCommand({
 
     console.log(`Share:   ${slug}`);
     console.log(`Files:   ${outDir}`);
-    if (args.pack) {
+    const uploadUrl =
+      (typeof args.uploadUrl === "string" && args.uploadUrl.trim()) ||
+      process.env.PROTOSHARE_UPLOAD_URL ||
+      "";
+    if (args.pack || uploadUrl) {
       const archive = await packGallery(outDir);
       console.log(`Pack:    ${archive}`);
+      if (uploadUrl) {
+        const remote = await uploadArchive({
+          file: archive,
+          putUrl: uploadUrl,
+          publicUrl:
+            (typeof args.publicUrl === "string" && args.publicUrl.trim()) ||
+            process.env.PROTOSHARE_PUBLIC_URL,
+        });
+        if (remote.ok) console.log(`Remote:  ${remote.url}`);
+        else console.log(`Remote:  пропуск (${remote.detail})`);
+      }
     }
     if (args.open === false) {
       return;

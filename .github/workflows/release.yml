@@ -1,0 +1,78 @@
+name: release
+
+on:
+  push:
+    tags:
+      - v0.1.0
+      - "v0.1.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @protoshare/capture exec playwright install chromium --with-deps
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm --filter @protoshare/overlay pack
+      - run: pnpm --filter protoshare pack
+      - name: Resolve npm dist-tag
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VER="${TAG#v}"
+          PKG_VER="$(node -p "require('./packages/cli/package.json').version")"
+          OVL_VER="$(node -p "require('./packages/overlay/package.json').version")"
+          if [ "$PKG_VER" != "$VER" ] || [ "$OVL_VER" != "$VER" ]; then
+            echo "package.json version ($PKG_VER / $OVL_VER) != tag $VER" >&2
+            exit 1
+          fi
+          if [[ "$TAG" == *-* ]]; then
+            echo "NPM_TAG=next" >> "$GITHUB_ENV"
+          else
+            echo "NPM_TAG=latest" >> "$GITHUB_ENV"
+          fi
+      - name: Publish overlay then CLI
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Tag checkout is detached (not publish-branch) and pack leaves *.tgz
+          extra=(--no-git-checks --tag "$NPM_TAG")
+          if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            extra+=(--provenance)
+          elif [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "OIDC unavailable and NPM_TOKEN is empty on Environment npm" >&2
+            exit 1
+          fi
+          pnpm --filter @protoshare/overlay publish --access public "${extra[@]}"
+          pnpm --filter protoshare publish "${extra[@]}"
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOTES="$(awk -v ver="${GITHUB_REF_NAME#v}" '
+            $0 ~ "^## \\[" ver "\\]" {p=1; next}
+            p && $0 ~ /^## / {exit}
+            p {print}
+          ' CHANGELOG.md || true)"
+          if [ -n "$NOTES" ]; then
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$NOTES"
+          else
+            gh release create "$GITHUB_REF_NAME" --generate-notes
+          fi

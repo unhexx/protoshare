@@ -15,7 +15,7 @@ import {
   writeGallery,
 } from "@protoshare/core";
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
-import { startShareServer, startSidecar } from "@protoshare/share-app";
+import { startShareServer, startSidecar, type ShareServer } from "@protoshare/share-app";
 import { openInBrowser } from "./browser.ts";
 import { copyToClipboard } from "./clipboard.ts";
 import { renderShareQr } from "./qr.ts";
@@ -277,17 +277,32 @@ const main = defineCommand({
     }
 
     const galleryPort = Number(args.port);
-    let cataloged = false;
+    let server: ShareServer;
     try {
-      const server = await startShareServer({
+      server = await startShareServer({
         root: outDir,
         port: Number.isFinite(galleryPort) ? galleryPort : 4177,
       });
-      console.log(`Gallery: ${server.origin}`);
+    } catch (err) {
+      // pack/upload уже прошёл — remote не должен пропасть из-за EADDRINUSE
+      const persisted = await persistShare({
+        slug,
+        title,
+        origin: target.origin,
+        remote,
+      });
+      noteCatalog(persisted.catalog);
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error(`Gallery: пропуск (${detail})`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`Gallery: ${server.origin}`);
 
-      let stopLive: (() => Promise<void>) | undefined;
-      let liveUrl: string | undefined;
-      if (args.live !== false) {
+    let stopLive: (() => Promise<void>) | undefined;
+    let liveUrl: string | undefined;
+    if (args.live !== false) {
+      try {
         const live = await tryLiveShare({
           localOrigin: server.origin,
           uniqueName: toZrokUniqueName(slug),
@@ -299,7 +314,13 @@ const main = defineCommand({
         } else {
           console.log(`Live:    пропуск (${live.detail})`);
         }
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        console.log(`Live:    пропуск (${detail})`);
       }
+    }
+
+    try {
       const persisted = await persistShare({
         slug,
         title,
@@ -308,7 +329,6 @@ const main = defineCommand({
         remote,
         gallery: server.origin,
       });
-      cataloged = true;
       noteCatalog(persisted.catalog);
       await noteShareUrl(persisted.sessionUrl ?? server.origin, args);
 
@@ -317,22 +337,9 @@ const main = defineCommand({
         process.on("SIGINT", () => resolve());
         process.on("SIGTERM", () => resolve());
       });
+    } finally {
       await stopLive?.();
       await server.stop();
-    } catch (err) {
-      // pack/upload уже прошёл — remote не должен пропасть из-за EADDRINUSE
-      if (!cataloged) {
-        const persisted = await persistShare({
-          slug,
-          title,
-          origin: target.origin,
-          remote,
-        });
-        noteCatalog(persisted.catalog);
-      }
-      const detail = err instanceof Error ? err.message : String(err);
-      console.error(`Gallery: пропуск (${detail})`);
-      process.exitCode = 1;
     }
   },
 });

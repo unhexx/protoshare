@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First published release. Two npm packages: `protoshare` (CLI) and `@protoshare/overlay`. Internal workspace packages stay unpublished.
 
+GitHub tag `v0.1.0` is the first npm `latest`; humans create that tag after CI is green.
+
 ### Added
 
 - Snapshot gallery for local Storybook, Vite, and Next.js (`npx protoshare`)

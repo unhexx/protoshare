@@ -10,7 +10,7 @@ export type SidecarShareResponse = {
   url: string;
 };
 
-export function isLocalPreviewOrigin(origin: string): boolean {
+export function isLoopbackOrigin(origin: string): boolean {
   let url: URL;
   try {
     url = new URL(origin);
@@ -19,7 +19,19 @@ export function isLocalPreviewOrigin(origin: string): boolean {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") return false;
   const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+export function isLocalPreviewOrigin(origin: string): boolean {
+  if (isLoopbackOrigin(origin)) return true;
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  const host = url.hostname.replace(/^\[|\]$/g, "");
   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
   if (!ipv4) return false;
   const a = Number(ipv4[1]);
@@ -37,10 +49,19 @@ export async function startSidecar(opts: {
   const app = new Hono();
 
   app.use("*", async (c, next) => {
-    c.header("Access-Control-Allow-Origin", "*");
-    c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    c.header("Access-Control-Allow-Headers", "content-type");
-    if (c.req.method === "OPTIONS") return c.body(null, 204);
+    const origin = c.req.header("origin");
+    const method = c.req.method;
+    if (method === "POST" || method === "OPTIONS") {
+      if (!origin || !isLoopbackOrigin(origin)) {
+        return c.json({ error: "forbidden-origin" }, 403);
+      }
+    }
+    if (origin && isLoopbackOrigin(origin)) {
+      c.header("Access-Control-Allow-Origin", origin);
+      c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      c.header("Access-Control-Allow-Headers", "content-type");
+    }
+    if (method === "OPTIONS") return c.body(null, 204);
     await next();
   });
 

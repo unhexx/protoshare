@@ -70,6 +70,21 @@ describe("captureTarget", () => {
       hint: CHROMIUM_INSTALL_HINT,
     });
   });
+
+  it("пробрасывает другие ошибки launch без подсказки", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "protoshare-cap-fail-"));
+    const closed = new Error("Target closed");
+    await expect(
+      captureTarget(
+        { kind: "static", origin: "http://127.0.0.1:9", stories: [], outDir },
+        {
+          launch: async () => {
+            throw closed;
+          },
+        },
+      ),
+    ).rejects.toBe(closed);
+  });
 });
 
 describe("isMissingChromiumError", () => {
@@ -80,5 +95,8 @@ describe("isMissingChromiumError", () => {
     expect(isMissingChromiumError(named)).toBe(true);
     expect(isMissingChromiumError(new MissingChromiumError())).toBe(true);
     expect(isMissingChromiumError(new Error("net::ERR_CONNECTION_REFUSED"))).toBe(false);
+    const stacked = new Error("spawn failed");
+    stacked.stack = "Error: spawn failed\n    at browserNotInstalled";
+    expect(isMissingChromiumError(stacked)).toBe(false);
   });
 });

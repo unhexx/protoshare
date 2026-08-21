@@ -33,15 +33,13 @@ export class MissingChromiumError extends Error {
   }
 }
 
-function errorText(err: unknown): string {
-  if (err instanceof Error) return `${err.name}\n${err.message}\n${err.stack ?? ""}`;
-  return String(err);
-}
-
 export function isMissingChromiumError(err: unknown): boolean {
   if (err instanceof MissingChromiumError) return true;
-  const text = errorText(err);
-  return /executable doesn['’]?t exist/i.test(text) || /browserNotInstalled/i.test(text);
+  if (err instanceof Error) {
+    if (err.name === "browserNotInstalled") return true;
+    return /executable doesn['’]?t exist/i.test(err.message);
+  }
+  return /executable doesn['’]?t exist/i.test(String(err));
 }
 
 function fileName(id: string): string {

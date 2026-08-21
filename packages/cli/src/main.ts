@@ -33,12 +33,14 @@ const listCommand = defineCommand({
   args: {
     limit: { type: "string", description: "Max rows", default: "20" },
     json: { type: "boolean", description: "Print catalog as JSON", default: false },
+    out: { type: "string", description: "Gallery output directory", default: ".protoshare/out" },
   },
   async run({ args }) {
     const limit = Number(args.limit);
     const result = await runList({
       limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
       json: args.json === true,
+      outDir: typeof args.out === "string" ? args.out : ".protoshare/out",
     });
     if (!result.ok) process.exitCode = 1;
   },

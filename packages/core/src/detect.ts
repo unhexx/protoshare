@@ -72,21 +72,35 @@ export async function detectTarget(origin: string): Promise<DetectedTarget> {
 
 const DEFAULT_PORTS = [6006, 5173, 3000, 4173];
 
+async function probePort(port: number): Promise<DetectedTarget | null> {
+  try {
+    const target = await detectTarget(`http://127.0.0.1:${port}`);
+    if (target.kind !== "static" || target.stories.length > 0) return target;
+    // static тоже ок, если порт ответил HTML — detectTarget не отличает мёртвый порт
+    // (fetch fail → static с пустым html). Проверяем, что origin живой:
+    const probe = await getText(target.origin + "/");
+    return probe !== null ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Все живые локальные превьюеры на стандартных (или заданных) портах. */
+export async function scanAllLocalPreviews(
+  ports: number[] = DEFAULT_PORTS,
+): Promise<DetectedTarget[]> {
+  const found: DetectedTarget[] = [];
+  for (const port of ports) {
+    const target = await probePort(port);
+    if (target) found.push(target);
+  }
+  return found;
+}
+
 /** Ищем живой локальный превьюер. */
 export async function scanLocalPreviews(
   ports: number[] = DEFAULT_PORTS,
 ): Promise<DetectedTarget | null> {
-  for (const port of ports) {
-    try {
-      const target = await detectTarget(`http://127.0.0.1:${port}`);
-      if (target.kind !== "static" || target.stories.length > 0) return target;
-      // static тоже ок, если порт ответил HTML — detectTarget не отличает мёртвый порт
-      // (fetch fail → static с пустым html). Проверяем, что origin живой:
-      const probe = await getText(target.origin + "/");
-      if (probe !== null) return target;
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  const all = await scanAllLocalPreviews(ports);
+  return all[0] ?? null;
 }

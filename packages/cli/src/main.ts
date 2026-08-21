@@ -4,7 +4,7 @@ import { defineCommand, runMain } from "citty";
 import { captureTarget } from "@protoshare/capture";
 import {
   detectTarget,
-  scanLocalPreviews,
+  scanAllLocalPreviews,
   toShareSlug,
   packGallery,
   recordShare,
@@ -17,6 +17,7 @@ import {
 import { toZrokUniqueName, tryLiveShare } from "@protoshare/live";
 import { startShareServer, startSidecar } from "@protoshare/share-app";
 import { runList } from "./list.ts";
+import { pickPreview } from "./pick.ts";
 import { createWatchHandler } from "./watch.ts";
 
 const listCommand = defineCommand({
@@ -89,11 +90,21 @@ const main = defineCommand({
     }
 
     const origin = typeof args.url === "string" && args.url.length > 0 ? args.url : null;
-    const target = origin ? await detectTarget(origin) : await scanLocalPreviews();
-    if (!target) {
-      console.error("Не нашёл локальный превьюер. Запусти Storybook/Vite или передай URL.");
-      process.exitCode = 1;
-      return;
+    let target;
+    if (origin) {
+      target = await detectTarget(origin);
+    } else {
+      const found = await scanAllLocalPreviews();
+      if (found.length === 0) {
+        console.error("Не нашёл локальный превьюер. Запусти Storybook/Vite или передай URL.");
+        process.exitCode = 1;
+        return;
+      }
+      target = await pickPreview(found);
+      if (!target) {
+        process.exitCode = 1;
+        return;
+      }
     }
 
     console.log(`Цель: ${target.kind} ${target.origin}`);

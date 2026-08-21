@@ -22,6 +22,8 @@ export type TryZrokShareOpts = {
   localOrigin: string;
   binaries?: string[];
   timeoutMs?: number;
+  /** Vanity hostname (`https://{name}.share.zrok.io`). On clash — anonymous share. */
+  uniqueName?: string;
 };
 
 const DEFAULT_TIMEOUT_MS = 12_000;
@@ -89,10 +91,27 @@ function stopChild(child: ChildProcess): Promise<void> {
   });
 }
 
+function shareArgs(target: string, uniqueName?: string): string[] {
+  const args = ["share", "public", "--headless"];
+  if (uniqueName) args.push("--unique-name", uniqueName);
+  args.push(target);
+  return args;
+}
+
+function shouldFallbackFromVanity(detail: string): boolean {
+  const d = detail.toLowerCase();
+  return (
+    /unique[- ]?name|already exists|in use|taken|unknown flag|unknown argument|invalid flag|not a valid/.test(
+      d,
+    ) || d.includes("--unique-name")
+  );
+}
+
 function runOne(
   binary: string,
   target: string,
   timeoutMs: number,
+  uniqueName?: string,
 ): Promise<LiveShareResult> {
   return new Promise((resolve) => {
     let settled = false;
@@ -100,7 +119,7 @@ function runOne(
     let child: ChildProcess;
 
     try {
-      child = spawn(binary, ["share", "public", "--headless", target], {
+      child = spawn(binary, shareArgs(target, uniqueName), {
         stdio: ["ignore", "pipe", "pipe"],
         env: process.env,
       });
@@ -208,12 +227,24 @@ export async function tryZrokShare(opts: TryZrokShareOpts): Promise<LiveShareRes
   }
 
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const uniqueName = opts.uniqueName?.trim() || undefined;
   let last: LiveShareResult | undefined;
   for (const binary of binaries) {
-    const result = await runOne(binary, target, timeoutMs);
+    const result = await runOne(binary, target, timeoutMs, uniqueName);
     if (result.ok) return result;
     last = result;
-    if (result.reason !== "missing-binary") return result;
+    if (result.reason === "missing-binary") continue;
+    if (
+      uniqueName &&
+      result.reason === "share-failed" &&
+      shouldFallbackFromVanity(result.detail)
+    ) {
+      const plain = await runOne(binary, target, timeoutMs);
+      if (plain.ok || plain.reason !== "missing-binary") return plain;
+      last = plain;
+      continue;
+    }
+    return result;
   }
   return (
     last ?? {

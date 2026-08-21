@@ -15,9 +15,10 @@ npx pnpm@10 --filter @protoshare/capture exec playwright install chromium
 npx pnpm@10 protoshare
 npx pnpm@10 protoshare http://127.0.0.1:6006
 npx pnpm@10 protoshare http://127.0.0.1:5173 --no-open
+npx pnpm@10 protoshare http://127.0.0.1:6006 --slug checkout
 ```
 
-Writes `.protoshare/out/<id>/index.html` + `shots/*.png` and serves a local gallery.
+Writes `.protoshare/out/<slug>/index.html` + `shots/*.png` and serves a local gallery. With zrok enabled, `--slug` also tries a vanity host (`https://<slug>.share.zrok.io`); if the name is taken, the share falls back to a random live URL.
 
 ```bash
 npx pnpm@10 test

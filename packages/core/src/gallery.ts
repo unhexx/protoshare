@@ -13,6 +13,7 @@ export type WriteGalleryInput = {
   title: string;
   origin: string;
   shots: ShotInput[];
+  slug?: string;
 };
 
 function safeShotName(id: string): string {
@@ -92,7 +93,7 @@ function renderHtml(
 }
 
 export async function writeGallery(input: WriteGalleryInput): Promise<{ slug: string; outDir: string }> {
-  const slug = toShareSlug(input.title);
+  const slug = toShareSlug(input.slug ?? input.title);
   const shotsDir = join(input.outDir, "shots");
   await mkdir(shotsDir, { recursive: true });
 

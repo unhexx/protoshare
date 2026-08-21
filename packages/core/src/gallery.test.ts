@@ -25,4 +25,21 @@ describe("writeGallery", () => {
     expect(manifest.slug).toBe("button");
     expect(manifest.shots).toHaveLength(1);
   });
+
+  it("принимает явный vanity-slug вместо заголовка", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "protoshare-"));
+    const result = await writeGallery({
+      outDir: join(dir, "gallery"),
+      title: "Button",
+      origin: "http://127.0.0.1:6006",
+      slug: "Checkout / Flow",
+      shots: [],
+    });
+
+    expect(result.slug).toBe("checkout-flow");
+    const manifest = JSON.parse(
+      await readFile(join(dir, "gallery", "manifest.json"), "utf8"),
+    );
+    expect(manifest.slug).toBe("checkout-flow");
+  });
 });

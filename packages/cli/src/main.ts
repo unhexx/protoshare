@@ -6,9 +6,10 @@ import { captureTarget } from "@protoshare/capture";
 import {
   detectTarget,
   scanLocalPreviews,
+  toShareSlug,
   writeGallery,
 } from "@protoshare/core";
-import { tryZrokShare } from "@protoshare/live";
+import { toZrokUniqueName, tryZrokShare } from "@protoshare/live";
 import { startShareServer } from "@protoshare/share-app";
 
 const main = defineCommand({
@@ -25,6 +26,10 @@ const main = defineCommand({
       description: "Try a public zrok URL (falls back to the local gallery)",
       default: true,
     },
+    slug: {
+      type: "string",
+      description: "Vanity share name (default: from the preview title)",
+    },
     port: { type: "string", description: "Gallery bind port (0 = ephemeral)", default: "4177" },
   },
   async run({ args }) {
@@ -37,7 +42,11 @@ const main = defineCommand({
     }
 
     console.log(`Цель: ${target.kind} ${target.origin}`);
-    const outDir = join(process.cwd(), String(args.out), Date.now().toString(36));
+    const title = target.title ?? target.kind;
+    const slug = toShareSlug(
+      typeof args.slug === "string" && args.slug.trim().length > 0 ? args.slug : title,
+    );
+    const outDir = join(process.cwd(), String(args.out), slug);
     await mkdir(outDir, { recursive: true });
 
     const shots = await captureTarget({
@@ -46,9 +55,9 @@ const main = defineCommand({
       stories: target.stories,
       outDir,
     });
-    const title = target.title ?? target.kind;
-    await writeGallery({ outDir, title, origin: target.origin, shots });
+    await writeGallery({ outDir, title, origin: target.origin, shots, slug });
 
+    console.log(`Share:   ${slug}`);
     console.log(`Files:   ${outDir}`);
     if (args.open === false) {
       return;
@@ -63,7 +72,10 @@ const main = defineCommand({
 
     let stopLive: (() => Promise<void>) | undefined;
     if (args.live !== false) {
-      const live = await tryZrokShare({ localOrigin: server.origin });
+      const live = await tryZrokShare({
+        localOrigin: server.origin,
+        uniqueName: toZrokUniqueName(slug),
+      });
       if (live.ok) {
         console.log(`Live:    ${live.url}`);
         stopLive = live.stop;

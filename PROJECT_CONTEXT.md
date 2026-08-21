@@ -7,8 +7,8 @@
 | Parameter | Value |
 |-----------|-------|
 | **Project** | protoshare |
-| **Goal** | Beautiful public URLs + snapshots for local Storybook, Vite, Next.js prototypes and design systems |
-| **Tech Stack** | TBD (Storybook / Vite / Next.js prototypes) |
+| **Goal** | Figma-like share links + snapshots for local Storybook/Vite/Next |
+| **Tech Stack** | TypeScript, pnpm, Hono, Playwright, citty (zrok phase 2) |
 | **Current Branch** | main |
 | **Template** | agentic_loop_template 3.5.1 (includes `tools/`) |
 
@@ -16,14 +16,19 @@
 
 | Field | Value |
 |-------|-------|
-| **Cycle Number** | 0 |
-| **Current Phase** | bootstrap |
+| **Cycle Number** | 1 |
+| **Current Phase** | phase-1-frozen-share |
 | **Status** | IN_PROGRESS |
-| **Confidence** | 0.75 |
+| **Confidence** | 0.85 |
 
 ## Key Decisions
 
-- Copied Agentix SSOT into `agentic_loop_template/` including progressive `tools/` blocks (`tools/select.py`).
+- Approach A: snapshots-first TypeScript open-core. Live tunnel is an adapter, not the product.
+- Do not invent a tunnel protocol. zrok (Apache-2) in phase 2.
+- Product language is TypeScript (`npx protoshare`). Python stays in the agentic template only.
+- Phase 1 gallery is generated HTML served by Hono — no React app until vanity URLs.
+- Load tools via `python agentic_loop_template/tools/select.py --intent …`. Never paste TOOLS_REGISTRY.
+- pxpipe / Headroom are optional dev harness, not runtime deps.
 
 ## Permanent Rules
 

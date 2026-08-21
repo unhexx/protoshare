@@ -1,8 +1,8 @@
 # TASK_SPECIFICATION.md — protoshare
 
-**Project:** protoshare
-**Version Target:** 1.0
-**Primary Goal:** Beautiful public URLs + snapshots for local Storybook, Vite, Next.js prototypes and design systems — share live interactive design work without deploying.
+**Project:** protoshare  
+**Version Target:** 0.1 (frozen share)  
+**Primary Goal:** Designer shares local Storybook/Vite/Next prototypes via snapshots and a share URL, without deploying.
 
 ## Business Objectives
 
@@ -12,12 +12,15 @@
 
 ## Scope
 
-**In scope:** public URL sharing, snapshots, local Storybook/Vite/Next.js/design-system prototypes.
-**Out of scope:** general-purpose hosting, production app deploys.
+**In scope (v0.1):** detect local preview, Playwright snapshots, static gallery, local Hono URL.  
+**In scope (later):** zrok live tunnel, vanity URLs, Storybook addon, Vite overlay.  
+**Out of scope:** general-purpose hosting, production app deploys, custom tunnel protocol, visual-regression CI.
 
 ## Success Criteria
 
-- All INVEST tasks in `.agent/TODO.md` marked DONE with tests passing.
-- Reviewer approves with `status=DONE` and clean git sync.
+- `pnpm test` green.
+- `pnpm protoshare --help` works.
+- Against a local preview, CLI writes a gallery with at least one PNG and serves it on 127.0.0.1.
+- Reviewer can open the gallery URL and see the snapshots.
 
 All loop output must use strict JSON handoffs per `agentic_loop_template/HANDOFF_SCHEMA.md`.

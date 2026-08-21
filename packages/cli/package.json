@@ -1,0 +1,14 @@
+{
+  "name": "protoshare",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "protoshare": "./src/main.ts"
+  },
+  "dependencies": {
+    "@protoshare/capture": "workspace:*",
+    "@protoshare/core": "workspace:*",
+    "@protoshare/share-app": "workspace:*",
+    "citty": "^0.1.6"
+  }
+}

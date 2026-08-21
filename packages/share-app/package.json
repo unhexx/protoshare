@@ -1,0 +1,12 @@
+{
+  "name": "@protoshare/share-app",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "hono": "^4.9.6"
+  }
+}

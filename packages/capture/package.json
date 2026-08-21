@@ -1,0 +1,12 @@
+{
+  "name": "@protoshare/capture",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@protoshare/core": "workspace:*",
+    "playwright": "^1.55.0"
+  }
+}

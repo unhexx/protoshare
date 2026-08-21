@@ -1,0 +1,21 @@
+{
+  "name": "protoshare-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "protoshare": "tsx packages/cli/src/main.ts",
+    "playwright:install": "pnpm --filter @protoshare/capture exec playwright install chromium"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
